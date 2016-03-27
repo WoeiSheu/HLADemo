@@ -1,9 +1,9 @@
 /**
  * Created by Gaea on 3/24/2016.
  */
-angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$location', function($http, $scope, $location) {
+angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$cookies', function($http, $scope, $cookies) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"", "federationName": "", "federateName": ""};
+    $scope.request = {"crcAddress":"", "federationName": "", "federateName": "", "id": sessionStorage.getItem('id')};
     console.log(JSON.stringify($scope.request));
 
     $scope.create = function() {
@@ -13,7 +13,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     }
 
     $scope.delete = function() {
-        $http({method: "Delete", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
+        $http({method: "Delete", url: "/federates/" + $scope.request.id }).success(function(data) {
            console.log(data);
         });
     }

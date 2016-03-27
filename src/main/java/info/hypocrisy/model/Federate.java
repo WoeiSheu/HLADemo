@@ -62,35 +62,36 @@ public class Federate extends NullFederateAmbassador {
         this.federateParameters = federateParameters;
     }
 
-    public void connect() {
-        try {
-            RtiFactory rtiFactory = RtiFactoryFactory.getRtiFactory();
-            _rtiAmbassador = rtiFactory.getRtiAmbassador();
-            _encoderFactory = rtiFactory.getEncoderFactory();
-        } catch (Exception e) {
-            System.out.println("Unable to create RTI ambassador.");
-            return;
-        }
-
-        String crcAddress = federateParameters.getCrcAddress();
-        String settingsDesignator = "crcAddress=" + crcAddress;
-        try {
-            _rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-    }
-
     public void createAndJoin() {
         try {
+            /**********************
+             * get Rti ambassador and connect with it.
+             **********************/
             try {
-                // Clean up old federation
+                RtiFactory rtiFactory = RtiFactoryFactory.getRtiFactory();
+                _rtiAmbassador = rtiFactory.getRtiAmbassador();
+                _encoderFactory = rtiFactory.getEncoderFactory();
+            } catch (Exception e) {
+                System.out.println("Unable to create RTI ambassador.");
+                return;
+            }
+
+            String crcAddress = federateParameters.getCrcAddress();
+            String settingsDesignator = "crcAddress=" + crcAddress;
+            _rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
+
+            /**********************
+             * Clean up old federation
+             **********************/
+            try {
                 _rtiAmbassador.destroyFederationExecution(federateParameters.getFederationName());
             } catch (FederatesCurrentlyJoined ignored) {
             } catch (FederationExecutionDoesNotExist ignored) {
             }
 
+            /**********************
+             * Create federation
+             **********************/
             String s = "http://localhost:8080/assets/config/Chat-evolved.xml";
             URL url = new URL(s);
             try {
@@ -98,6 +99,9 @@ public class Federate extends NullFederateAmbassador {
             } catch (FederationExecutionAlreadyExists ignored) {
             }
 
+            /**********************
+             * Join current federate(specified with this) into current federation(specified with _rtiAmbassador)
+             **********************/
             _rtiAmbassador.joinFederationExecution(federateParameters.getFederateName(), federateParameters.getFederationName(), new URL[]{url});
         } catch (Exception e) {
             System.out.println("Unable to join");

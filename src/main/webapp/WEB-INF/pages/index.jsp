@@ -39,7 +39,7 @@
       </div>
     </div>
   </nav>
-  <div class="container-fluid">
+  <div class="container-fluid" ng-controller="GlobalController as globalCtrl">
     <div class="row">
       <span class="col-xs-2"><img src="assets/images/logo.png"></span>
       <span class="col-xs-8 text-center" style="font-size:36px">HLA Demo</span>
@@ -54,9 +54,11 @@
 <script src="assets/javascripts/bootstrap.js"></script>
 <script src="assets/javascripts/angular.min.js"></script>
 <script src="assets/javascripts/angular-route.min.js"></script>
+<script src="assets/javascripts/angular-cookies.min.js"></script>
 <script src="assets/javascripts/angular-sanitize.min.js"></script>
 <script src="assets/javascripts/app.js"></script>
 <script src="assets/javascripts/routes.js"></script>
+<script src="assets/javascripts/global-controller.js"></script>
 <script src="assets/javascripts/federates-controller.js"></script>
 <script src="assets/javascripts/rti-controller.js"></script>
 <script src="assets/javascripts/administration-controller.js"></script>

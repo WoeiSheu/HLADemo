@@ -26,42 +26,48 @@ import java.util.Map;
  * Created by Gaea on 3/24/2016.
  */
 @Controller
-@RequestMapping("/federates")
+//@RequestMapping("/federates")
 public class FederatesController {
-    @RequestMapping(method = RequestMethod.POST)
+    Map<String,Federate> map = new HashMap<String, Federate>();
+    @RequestMapping(value = "/federates", method = RequestMethod.POST)
     @ResponseBody
-    public String create(HttpSession session, @RequestBody FederateParameters federateParameters) {
-        String id = session.getId();
-        Map<String,Federate> map = new HashMap<String, Federate>();
+    public String create(@RequestBody FederateParameters federateParameters) {
+        String id = federateParameters.getId();
         if(map.containsKey(id)) {
-            return "{\"status\":\"you have\"}";
+            Federate federate = map.get(id);
+            return "{\"status\":\"Have created before.\"}";
+        } else {
+            Federate federate = new Federate(federateParameters);
+            federate.createAndJoin();
+
+            map.put(id,federate);
+
+            JSONObject result = new JSONObject("{\"status\":\"Success\"}");
+            return result.toString();
         }
-
-        Federate federate = new Federate(federateParameters);
-        federate.connect();
-        federate.createAndJoin();
-
-        JSONObject result = new JSONObject("{\"status\":\"Success\"}");
-        return result.toString();
     }
 
-    @RequestMapping(method = RequestMethod.PUT)
+    @RequestMapping(value = "/federates/{id}", method = RequestMethod.PUT)
     @ResponseBody
-    public String update(@RequestBody FederateParameters federateParameters) {
-        Federate federate = new Federate(federateParameters);
+    public String update(@PathVariable String id) {
+        Federate federate = (new HashMap<String,Federate>()).get("id");
         federate.update();
 
         JSONObject result = new JSONObject("{\"status\":\"Success\"}");
         return result.toString();
     }
 
-    @RequestMapping(method = RequestMethod.DELETE)
+    @RequestMapping(value = "/federates/{id}",method = RequestMethod.DELETE)
     @ResponseBody
-    public String destroy(@RequestBody FederateParameters federateParameters) {
-        Federate federate = new Federate(federateParameters);
-        federate.destroy();
-
-        JSONObject result = new JSONObject("{\"status\":\"Success\"}");
-        return result.toString();
+    public String destroy(@PathVariable String id) {
+        if(map.containsKey(id)) {
+            Federate federate = map.get(id);
+            federate.destroy();
+            map.remove(id);
+            JSONObject result = new JSONObject("{\"status\":\"Success\"}");
+            return result.toString();
+        } else {
+            return "{\"status\":\"Failure\"}";
+        }
     }
 }
