@@ -23,7 +23,19 @@
                 </div>
             </div>
             <div class="form-group">
-                <button type="button" class="btn-info col-xs-offset-8" ng-click="create()">CreateAndJoin</button>
+                <label class="control-label col-xs-4">FOM URL</label>
+                <div class="col-xs-7">
+                    <input type="text" class="form-control" placeholder="Please input your fom url." ng-model="request.fomUrl">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label col-xs-4">FOM File</label>
+                <div class="col-xs-7">
+                    <span class="glyphicon glyphicon-folder-open" style="color:#f7941d;cursor:pointer;position:relative;left:6px;top:8px" ng-click="clickToUpload('fom')"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="button" class="btn-info col-xs-offset-9" ng-click="create()">Create</button>
                 &nbsp;&nbsp;&nbsp;<button type="button" class="btn-info" ng-click="delete()">Delete</button>
             </div>
         </div>
@@ -32,3 +44,5 @@
 
     </div>
 </div>
+
+<input type="file" id="fileToUpload" name="fileToUpload" onchange="angular.element(this).scope().upload(this.files)" class="hide"/>

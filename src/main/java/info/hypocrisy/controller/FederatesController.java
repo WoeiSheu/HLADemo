@@ -2,33 +2,52 @@ package info.hypocrisy.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.sun.deploy.net.HttpRequest;
 import info.hypocrisy.model.Federate;
 import info.hypocrisy.model.FederateParameters;
-import org.json.JSONObject;
-import org.springframework.data.repository.query.Parameter;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import se.pitch.prti1516e.model.Request;
 
-import javax.inject.Scope;
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import java.io.File;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by Gaea on 3/24/2016.
+ * Created by Hypocrisy on 3/24/2016.
+ * This controller: manage federates with actions like CRUD.
  */
 @Controller
 //@RequestMapping("/federates")
 public class FederatesController {
     Map<String,Federate> map = new HashMap<String, Federate>();
+    Gson gson = new GsonBuilder().serializeNulls().create();
+
+    private class ResponseValue {
+        private String status;
+
+        public ResponseValue() {
+            this.status = "Success";
+        }
+        public ResponseValue(String status) {
+            this.status = status;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+    }
+
+    @RequestMapping(value = "/federates/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public String get(@PathVariable String id) {
+        Federate federate = map.get(id);
+
+        ResponseValue responseValue = new ResponseValue("Success");
+        return gson.toJson(responseValue);
+    }
+
     @RequestMapping(value = "/federates", method = RequestMethod.POST)
     @ResponseBody
     public String create(@RequestBody FederateParameters federateParameters) {
@@ -42,19 +61,20 @@ public class FederatesController {
 
             map.put(id,federate);
 
-            JSONObject result = new JSONObject("{\"status\":\"Success\"}");
-            return result.toString();
+            ResponseValue responseValue = new ResponseValue("Success");
+            return gson.toJson(responseValue);
         }
     }
 
-    @RequestMapping(value = "/federates/{id}", method = RequestMethod.PUT)
+    @RequestMapping(value = "/federates", method = RequestMethod.PUT)
     @ResponseBody
-    public String update(@PathVariable String id) {
-        Federate federate = (new HashMap<String,Federate>()).get("id");
+    public String update(@RequestBody FederateParameters federateParameters) {
+        String id = federateParameters.getId();
+        Federate federate = (new HashMap<String,Federate>()).get(id);
         federate.update();
 
-        JSONObject result = new JSONObject("{\"status\":\"Success\"}");
-        return result.toString();
+        ResponseValue responseValue = new ResponseValue("Success");
+        return gson.toJson(responseValue);
     }
 
     @RequestMapping(value = "/federates/{id}",method = RequestMethod.DELETE)
@@ -64,10 +84,12 @@ public class FederatesController {
             Federate federate = map.get(id);
             federate.destroy();
             map.remove(id);
-            JSONObject result = new JSONObject("{\"status\":\"Success\"}");
-            return result.toString();
+
+            ResponseValue responseValue = new ResponseValue("Success");
+            return gson.toJson(responseValue);
         } else {
-            return "{\"status\":\"Failure\"}";
+            ResponseValue responseValue = new ResponseValue("Failure");
+            return gson.toJson(responseValue);
         }
     }
 }

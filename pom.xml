@@ -77,11 +77,6 @@
       <version>4.2.0.Final</version>
     </dependency>
     <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20160212</version>
-    </dependency>
-    <dependency>
       <groupId>com.cedarsoft.serialization</groupId>
       <artifactId>jackson</artifactId>
       <version>7.1.0</version>

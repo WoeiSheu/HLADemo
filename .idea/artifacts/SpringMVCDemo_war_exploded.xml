@@ -37,7 +37,6 @@
           <element id="library" level="project" name="Maven: org.hibernate.javax.persistence:hibernate-jpa-2.0-api:1.0.1.Final" />
           <element id="library" level="project" name="Maven: org.javassist:javassist:3.15.0-GA" />
           <element id="library" level="project" name="Maven: org.hibernate.common:hibernate-commons-annotations:4.0.1.Final" />
-          <element id="library" level="project" name="Maven: org.json:json:20160212" />
           <element id="library" level="project" name="Maven: com.cedarsoft.serialization:jackson:7.1.0" />
           <element id="library" level="project" name="Maven: com.cedarsoft:serialization:7.1.0" />
           <element id="library" level="project" name="Maven: com.cedarsoft.commons:version:7.1.0" />
@@ -51,13 +50,6 @@
           <element id="library" level="project" name="Maven: org.postgresql:postgresql:9.4-1206-jdbc42" />
           <element id="library" level="project" name="Maven: org.apache.tomcat:tomcat-jdbc:7.0.68" />
           <element id="library" level="project" name="Maven: org.apache.tomcat:tomcat-juli:7.0.68" />
-          <element id="library" level="project" name="prticore" />
-          <element id="library" level="project" name="prti1516e" />
-          <element id="library" level="project" name="prti" />
-          <element id="library" level="project" name="wrapper" />
-          <element id="library" level="project" name="booster1516" />
-          <element id="library" level="project" name="ewert" />
-          <element id="library" level="project" name="jgl3.1.0" />
         </element>
       </element>
       <element id="directory" name="META-INF">

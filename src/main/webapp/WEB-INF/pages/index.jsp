@@ -32,8 +32,8 @@
       <div class="navbar-collapse collapse">
         <ul class="nav navbar-nav">
           <li class="active"><a href="#">Home</a></li>
-          <li id="about"><a href="#/rti">RTI</a></li>
-          <li id="contact"><a href="#/federates">Federates</a></li>
+          <li id="rti"><a href="#/rti">RTI</a></li>
+          <li id="federate"><a href="#/federates">Federates</a></li>
           <li id="administration"><a href="#/administration">Admin</a></li>
         </ul>
       </div>
@@ -55,6 +55,7 @@
 <script src="assets/javascripts/angular.min.js"></script>
 <script src="assets/javascripts/angular-route.min.js"></script>
 <script src="assets/javascripts/angular-cookies.min.js"></script>
+<script src="assets/javascripts/angular-animate.min.js"></script>
 <script src="assets/javascripts/angular-sanitize.min.js"></script>
 <script src="assets/javascripts/app.js"></script>
 <script src="assets/javascripts/routes.js"></script>

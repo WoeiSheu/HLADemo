@@ -15,8 +15,4 @@ public class HomeController {
     public String index() {
         return "index";
     }
-    @RequestMapping(method = RequestMethod.POST)
-    public String create() {
-        return "create";
-    }
 }

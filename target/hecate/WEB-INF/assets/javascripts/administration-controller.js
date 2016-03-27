@@ -6,15 +6,24 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.request = {"crcAddress":"", "federationName": "", "federateName": "", "id": sessionStorage.getItem('id')};
     console.log(JSON.stringify($scope.request));
 
+    $scope.clickToUpload = function(src) {
+        $scope.source = src;
+        document.getElementById('fileToUpload').click();
+    };
+
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
             console.log(data);
         });
-    }
+    };
 
     $scope.delete = function() {
         $http({method: "Delete", url: "/federates/" + $scope.request.id }).success(function(data) {
            console.log(data);
         });
-    }
+    };
+
+    $scope.upload = function (files) {
+        //$scope.request.fomFile = files[0];
+    };
 }]);
