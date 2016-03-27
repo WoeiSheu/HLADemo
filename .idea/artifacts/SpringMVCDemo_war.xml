@@ -1,0 +1,19 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="SpringMVCDemo:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <root id="archive" name="hecate.war">
+      <element id="artifact" artifact-name="SpringMVCDemo:war exploded" />
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="prticore" />
+          <element id="library" level="project" name="prti1516e" />
+          <element id="library" level="project" name="prti" />
+          <element id="library" level="project" name="wrapper" />
+          <element id="library" level="project" name="booster1516" />
+          <element id="library" level="project" name="ewert" />
+          <element id="library" level="project" name="jgl3.1.0" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>
