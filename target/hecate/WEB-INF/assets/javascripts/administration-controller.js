@@ -3,7 +3,7 @@
  */
 angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$cookies', function($http, $scope, $cookies) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"", "federationName": "", "federateName": "", "id": sessionStorage.getItem('id')};
+    $scope.request = {"crcAddress":"localhost", "federationName": "", "federateName": "", "id": sessionStorage.getItem('id')};
     console.log(JSON.stringify($scope.request));
 
     $scope.clickToUpload = function(src) {

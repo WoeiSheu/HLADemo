@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="assets/stylesheets/bootstrap.css">
   <link rel="stylesheet" href="assets/stylesheets/bootstrap-theme.css">
   <link rel="stylesheet" href="assets/stylesheets/home.css">
+  <link rel="stylesheet" href="assets/stylesheets/federates.css">
 </head>
 <body ng-app="HLADemo">
   <nav class="navbar navbar-inverse navbar-static-top">
@@ -55,6 +56,7 @@
 <script src="assets/javascripts/angular.min.js"></script>
 <script src="assets/javascripts/angular-route.min.js"></script>
 <script src="assets/javascripts/angular-cookies.min.js"></script>
+<script src="assets/javascripts/angular-animate.min.js"></script>
 <script src="assets/javascripts/angular-sanitize.min.js"></script>
 <script src="assets/javascripts/app.js"></script>
 <script src="assets/javascripts/routes.js"></script>

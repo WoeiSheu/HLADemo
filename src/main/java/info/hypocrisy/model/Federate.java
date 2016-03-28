@@ -5,15 +5,18 @@ import hla.rti1516e.encoding.EncoderFactory;
 import hla.rti1516e.encoding.HLAunicodeString;
 import hla.rti1516e.encoding.DecoderException;
 import hla.rti1516e.exceptions.*;
+import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
 import hla.rti1516e.time.HLAfloat64TimeFactory;
 import org.springframework.web.context.WebApplicationContext;
+import se.pitch.prti1516e.time.HLAfloat64IntervalImpl;
+import se.pitch.prti1516e.time.HLAfloat64TimeImpl;
+import se.pitch.prti1516e.time.LogicalTimeIntervalDouble;
 
 import javax.annotation.Resources;
 import javax.servlet.ServletContext;
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.net.URL;
 /**
  * Created by Hypocrisy on 3/23/2016.
@@ -109,6 +112,11 @@ public class Federate extends NullFederateAmbassador {
         }
     }
 
+    private AdvanceTime advanceTime;
+    public double getTimeToMoveTo() {
+        return advanceTime.getTimeToMoveTo().getValue();
+    }
+    protected Timer timer = new Timer();
     public void run() {
         try {
             // Subscribe and publish interactions
@@ -129,9 +137,22 @@ public class Federate extends NullFederateAmbassador {
             _rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
             _rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
 
+            /**********************
+             * Add by Hypocrisy on 03/28/2015
+             * Time Management Variables.
+             **********************/
+            HLAfloat64Interval mInterval = new HLAfloat64IntervalImpl(1);
+            //_rtiAmbassador->enableAsynchronousDelivery();
+            _rtiAmbassador.enableTimeConstrained();
+            _rtiAmbassador.enableTimeRegulation(mInterval);
+            HLAfloat64Time timeToMoveTo = new HLAfloat64TimeImpl(0);
+            HLAfloat64Interval advancedStep = new HLAfloat64IntervalImpl(1);
+            _rtiAmbassador.enableCallbacks();
+
             // Reserve object instance name and register object instance
             do {
-                _username = _args[1];
+                Calendar cal = Calendar.getInstance();
+                _username = "hecate" + cal.get(Calendar.SECOND);
 
                 try {
                     _reservationComplete = false;
@@ -158,9 +179,12 @@ public class Federate extends NullFederateAmbassador {
 
             _userId = _rtiAmbassador.registerObjectInstance(participantId, _username);
 
+            advanceTime = new AdvanceTime(timeToMoveTo,advancedStep,_rtiAmbassador);
+            timer.schedule(advanceTime, 0, 1000);
+
             HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
 
-            String message = _args[2];
+            String message = "Hello";
 
             ParameterHandleValueMap parameters = _rtiAmbassador.getParameterHandleValueMapFactory().create(1);
             HLAunicodeString messageEncoder = _encoderFactory.createHLAunicodeString();
@@ -187,6 +211,7 @@ public class Federate extends NullFederateAmbassador {
             }
             _rtiAmbassador.disconnect();
             _rtiAmbassador = null;
+            timer.cancel();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -289,6 +314,54 @@ public class Federate extends NullFederateAmbassador {
                 attributeValues.put(_attributeIdName, nameEncoder.toByteArray());
                 _rtiAmbassador.updateAttributeValues(_userId, attributeValues, null);
             } catch (RTIexception ignored) {
+            }
+        }
+    }
+
+    @Override
+    public void timeAdvanceGrant(LogicalTime logicalTime) {
+    }
+
+    class AdvanceTime extends TimerTask {
+        private HLAfloat64Time timeToMoveTo;
+        private HLAfloat64Interval advancedStep;
+        private RTIambassador rtiAmbassador;
+        public AdvanceTime(HLAfloat64Time timeToMoveTo, HLAfloat64Interval advancedStep, RTIambassador rtiAmbassador) {
+            this.timeToMoveTo = timeToMoveTo;
+            this.advancedStep = advancedStep;
+            this.rtiAmbassador = rtiAmbassador;
+        }
+
+        public HLAfloat64Time getTimeToMoveTo() {
+            return timeToMoveTo;
+        }
+        @Override
+        public void run() {
+            try {
+                timeToMoveTo = timeToMoveTo.add(advancedStep);
+                rtiAmbassador.timeAdvanceRequest(timeToMoveTo);
+            } catch (IllegalTimeArithmetic illegalTimeArithmetic) {
+                illegalTimeArithmetic.printStackTrace();
+            } catch (LogicalTimeAlreadyPassed logicalTimeAlreadyPassed) {
+                logicalTimeAlreadyPassed.printStackTrace();
+            } catch (RequestForTimeRegulationPending requestForTimeRegulationPending) {
+                requestForTimeRegulationPending.printStackTrace();
+            } catch (SaveInProgress saveInProgress) {
+                saveInProgress.printStackTrace();
+            } catch (InvalidLogicalTime invalidLogicalTime) {
+                invalidLogicalTime.printStackTrace();
+            } catch (InTimeAdvancingState inTimeAdvancingState) {
+                inTimeAdvancingState.printStackTrace();
+            } catch (RestoreInProgress restoreInProgress) {
+                restoreInProgress.printStackTrace();
+            } catch (RequestForTimeConstrainedPending requestForTimeConstrainedPending) {
+                requestForTimeConstrainedPending.printStackTrace();
+            } catch (RTIinternalError rtIinternalError) {
+                rtIinternalError.printStackTrace();
+            } catch (FederateNotExecutionMember federateNotExecutionMember) {
+                federateNotExecutionMember.printStackTrace();
+            } catch (NotConnected notConnected) {
+                notConnected.printStackTrace();
             }
         }
     }

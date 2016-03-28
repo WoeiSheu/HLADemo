@@ -19,7 +19,7 @@ angular.module('HLADemo').config(['$routeProvider', function($routeProvider){
             controllerAs: 'adminCtrl'
         })
         .when('/', {
-            redirectTo: '/federates'
+            redirectTo: '/administration'
         })
         .otherwise({
             redirectTo: '/'

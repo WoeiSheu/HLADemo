@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="assets/stylesheets/bootstrap.css">
   <link rel="stylesheet" href="assets/stylesheets/bootstrap-theme.css">
   <link rel="stylesheet" href="assets/stylesheets/home.css">
+  <link rel="stylesheet" href="assets/stylesheets/federates.css">
 </head>
 <body ng-app="HLADemo">
   <nav class="navbar navbar-inverse navbar-static-top">

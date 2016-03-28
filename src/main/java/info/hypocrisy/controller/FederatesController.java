@@ -22,6 +22,7 @@ public class FederatesController {
 
     private class ResponseValue {
         private String status;
+        private double time;
 
         public ResponseValue() {
             this.status = "Success";
@@ -33,12 +34,35 @@ public class FederatesController {
         public String getStatus() {
             return status;
         }
+        public double getTime() {
+            return time;
+        }
 
         public void setStatus(String status) {
             this.status = status;
         }
+        public void setTime(double time) {
+            this.time = time;
+        }
     }
 
+    @RequestMapping(value = "/federates/time/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public String getTime(@PathVariable String id) {
+        if(map.containsKey(id)) {
+            Federate federate = map.get(id);
+            double time = federate.getTimeToMoveTo();
+
+            ResponseValue responseValue = new ResponseValue("Success");
+            responseValue.setTime(time);
+            return gson.toJson(responseValue);
+        } else {
+            ResponseValue responseValue = new ResponseValue("Failure");
+            return gson.toJson(responseValue);
+        }
+    }
+
+    /*
     @RequestMapping(value = "/federates/{id}", method = RequestMethod.GET)
     @ResponseBody
     public String get(@PathVariable String id) {
@@ -47,6 +71,7 @@ public class FederatesController {
         ResponseValue responseValue = new ResponseValue("Success");
         return gson.toJson(responseValue);
     }
+    */
 
     @RequestMapping(value = "/federates", method = RequestMethod.POST)
     @ResponseBody
@@ -58,6 +83,7 @@ public class FederatesController {
         } else {
             Federate federate = new Federate(federateParameters);
             federate.createAndJoin();
+            federate.run();
 
             map.put(id,federate);
 
