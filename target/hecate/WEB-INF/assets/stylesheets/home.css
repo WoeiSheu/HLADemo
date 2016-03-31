@@ -29,7 +29,7 @@
 
 .navbar-inverse .btn-navbar:active,
 .navbar-inverse .btn-navbar.active {
-    background-color: #000000 \9;
+    background-color: #000000;
 }
 .navbar .btn-navbar .icon-bar {
     display: block;
@@ -54,4 +54,51 @@
         top: 9px;
         right: 6px;
     }
+}
+
+
+/**********************
+ * For modal dialog
+ **********************/
+.modal-dialog {
+
+}
+.modal-content {
+    width: 600px;
+    background: #eeeeee;
+}
+.modal-header {
+    background: #000000;
+    cursor: move;
+    color: #ff8800;
+    font-size: 16px;
+    height: 36px;
+    padding-top: 4px;
+}
+.modal-header > .close {
+    color: #ffffff;
+    opacity: 1;
+}
+.modal-header .close:hover {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 3px 0px;
+}
+.modal-header > .modal-title {
+    font-style: italic;
+}
+.modal-body > h4 {
+    margin: 0px auto 6px auto;
+    text-align: center;
+}
+.modal-body > h5 {
+    margin: auto;
+    text-align: center;
+}
+
+/**********************
+ * remove blue outline in button
+ **********************/
+.btn:focus,.btn:active {
+    outline: none !important;
 }

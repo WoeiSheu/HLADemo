@@ -13,6 +13,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HLA Demo</title>
   <link rel="shortcut icon" href="assets/images/favicon.ico">
+  <link rel="stylesheet" href="assets/stylesheets/jquery-ui.min.css">
+  <link rel="stylesheet" href="assets/stylesheets/jquery-ui.structure.min.css">
+  <link rel="stylesheet" href="assets/stylesheets/jquery-ui.theme.min.css">
   <link rel="stylesheet" href="assets/stylesheets/bootstrap.css">
   <link rel="stylesheet" href="assets/stylesheets/bootstrap-theme.css">
   <link rel="stylesheet" href="assets/stylesheets/home.css">
@@ -52,6 +55,7 @@
     </div>
   </div>
 <script src="assets/javascripts/jquery-2.1.1.js"></script>
+<script src="assets/javascripts/jquery-ui.min.js"></script>
 <script src="assets/javascripts/bootstrap.js"></script>
 <script src="assets/javascripts/angular.min.js"></script>
 <script src="assets/javascripts/angular-route.min.js"></script>

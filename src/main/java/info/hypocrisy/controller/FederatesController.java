@@ -3,12 +3,12 @@ package info.hypocrisy.controller;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import info.hypocrisy.model.Federate;
+import info.hypocrisy.model.FederateAttributes;
 import info.hypocrisy.model.FederateParameters;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by Hypocrisy on 3/24/2016.
@@ -17,12 +17,11 @@ import java.util.Map;
 @Controller
 //@RequestMapping("/federates")
 public class FederatesController {
-    Map<String,Federate> map = new HashMap<String, Federate>();
+    Map<String,Map<String,Federate>> mapFederation = new HashMap<String, Map<String, Federate>>();
     Gson gson = new GsonBuilder().serializeNulls().create();
 
     private class ResponseValue {
         private String status;
-        private double time;
 
         public ResponseValue() {
             this.status = "Success";
@@ -34,88 +33,110 @@ public class FederatesController {
         public String getStatus() {
             return status;
         }
-        public double getTime() {
-            return time;
-        }
 
         public void setStatus(String status) {
             this.status = status;
         }
-        public void setTime(double time) {
-            this.time = time;
-        }
     }
 
-    @RequestMapping(value = "/federates/time/{id}", method = RequestMethod.GET)
+    @RequestMapping(value = "/federates", method = RequestMethod.GET)
     @ResponseBody
-    public String getTime(@PathVariable String id) {
-        if(map.containsKey(id)) {
-            Federate federate = map.get(id);
-            double time = federate.getTimeToMoveTo();
+    public String getAllFederatesAttributes() {
+        Set<Map.Entry<String,Map<String,Federate>>> federationsSet = mapFederation.entrySet();
+        Iterator<Map.Entry<String,Map<String,Federate>>> iterFederation = federationsSet.iterator();
 
-            ResponseValue responseValue = new ResponseValue("Success");
-            responseValue.setTime(time);
-            return gson.toJson(responseValue);
-        } else {
-            ResponseValue responseValue = new ResponseValue("Failure");
-            return gson.toJson(responseValue);
+        //ArrayList<String> federationsName = new ArrayList<String>();
+        Map<String,Map<String,FederateAttributes>> federatesAttributesMap = new HashMap<String, Map<String, FederateAttributes>>();
+        while (iterFederation.hasNext()) {
+            Map.Entry<String, Map<String, Federate>> entry1 = iterFederation.next();
+            //federationsName.add(entry.getKey());
+
+            Map<String, Federate> mapFederate = entry1.getValue();
+            Set<Map.Entry<String, Federate>> federatesSet = mapFederate.entrySet();
+            Iterator<Map.Entry<String, Federate>> iterFederate = federatesSet.iterator();
+
+            Map<String, FederateAttributes> federateAttributesMap = new HashMap<String, FederateAttributes>();
+            while (iterFederate.hasNext()) {
+                Map.Entry<String, Federate> entry2 = iterFederate.next();
+                /**********************
+                 * Set federateAttributes
+                 **********************/
+                FederateAttributes federateAttributes = entry2.getValue().getFederateAttributes();
+                federateAttributesMap.put(entry2.getKey(),federateAttributes);
+            }
+            federatesAttributesMap.put(entry1.getKey(),federateAttributesMap);
         }
+        return gson.toJson(federatesAttributesMap);
     }
-
-    /*
-    @RequestMapping(value = "/federates/{id}", method = RequestMethod.GET)
-    @ResponseBody
-    public String get(@PathVariable String id) {
-        Federate federate = map.get(id);
-
-        ResponseValue responseValue = new ResponseValue("Success");
-        return gson.toJson(responseValue);
-    }
-    */
 
     @RequestMapping(value = "/federates", method = RequestMethod.POST)
     @ResponseBody
     public String create(@RequestBody FederateParameters federateParameters) {
-        String id = federateParameters.getId();
-        if(map.containsKey(id)) {
-            Federate federate = map.get(id);
-            return "{\"status\":\"Have created before.\"}";
+        String federationName = federateParameters.getFederationName();
+        String federateName = federateParameters.getFederateName();
+
+        if(mapFederation.containsKey(federationName)) {
+            Map<String,Federate> mapFederate = mapFederation.get(federationName);
+            if(mapFederate.containsKey(federateName)) {
+                return "{\"status\":\"Have created before.\"}";
+            } else {
+                Federate federate = new Federate(federateParameters);
+                federate.createAndJoin();
+                federate.run();
+                mapFederate.put(federateName,federate);
+            }
         } else {
+            Map<String,Federate> mapFederate = new HashMap<String, Federate>();
             Federate federate = new Federate(federateParameters);
             federate.createAndJoin();
             federate.run();
-
-            map.put(id,federate);
-
-            ResponseValue responseValue = new ResponseValue("Success");
-            return gson.toJson(responseValue);
+            mapFederate.put(federateName,federate);
+            mapFederation.put(federationName,mapFederate);
         }
+        ResponseValue responseValue = new ResponseValue("Success");
+        return gson.toJson(responseValue);
     }
 
     @RequestMapping(value = "/federates", method = RequestMethod.PUT)
     @ResponseBody
     public String update(@RequestBody FederateParameters federateParameters) {
-        String id = federateParameters.getId();
-        Federate federate = (new HashMap<String,Federate>()).get(id);
-        federate.update();
+        String federationName = federateParameters.getFederationName();
+        String federateName = federateParameters.getFederateName();
+        if(mapFederation.containsKey(federationName)) {
+            if( mapFederation.get(federationName).containsKey(federateName) ) {
+                Federate federate = mapFederation.get(federationName).get(federateName);
+                federate.update();
 
-        ResponseValue responseValue = new ResponseValue("Success");
+                ResponseValue responseValue = new ResponseValue("Success");
+                return gson.toJson(responseValue);
+            }
+        }
+
+        ResponseValue responseValue = new ResponseValue("Failure");
         return gson.toJson(responseValue);
     }
 
-    @RequestMapping(value = "/federates/{id}",method = RequestMethod.DELETE)
+    @RequestMapping(value = "/federates/{federationName}/{federateName}",method = RequestMethod.DELETE)
     @ResponseBody
-    public String destroy(@PathVariable String id) {
-        if(map.containsKey(id)) {
-            Federate federate = map.get(id);
-            federate.destroy();
-            map.remove(id);
+    public String destroy(@PathVariable String federationName,@PathVariable String federateName) {
+        if(mapFederation.containsKey(federationName)) {
+            if( mapFederation.get(federationName).containsKey(federateName) ) {
+                Federate federate = mapFederation.get(federationName).get(federateName);
+                federate.destroy();
 
-            ResponseValue responseValue = new ResponseValue("Success");
-            return gson.toJson(responseValue);
-        } else {
-            ResponseValue responseValue = new ResponseValue("Failure");
-            return gson.toJson(responseValue);
+                mapFederation.get(federationName).remove(federateName);
+                if(mapFederation.get(federationName).isEmpty()) {
+                    mapFederation.remove(federationName);
+                }
+
+                ResponseValue responseValue = new ResponseValue("Success");
+                return gson.toJson(responseValue);
+            } else {
+                mapFederation.remove(federationName);
+            }
         }
+
+        ResponseValue responseValue = new ResponseValue("Failure");
+        return gson.toJson(responseValue);
     }
 }

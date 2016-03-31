@@ -1,3 +1,10 @@
 <div class="panel">
-    <img class="tank" id="tank" src="/assets/images/tan01.jpg">
+    <div ng-repeat="(federationName,federation) in federatesWithTime">
+        <h4>{{federationName}}</h4>
+        <div ng-repeat="(federateName,federate) in federation">
+            <span style="position:relative;overflow-x:hidden" ng-style="{'left':federate.time*10 + 'px'}">{{federateName}}
+                <img style="width:36px;height:36px" src="/assets/images/tan01.jpg">
+            </span>
+        </div>
+    </div>
 </div>

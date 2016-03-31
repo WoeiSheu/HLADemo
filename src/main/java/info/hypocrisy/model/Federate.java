@@ -65,6 +65,15 @@ public class Federate extends NullFederateAmbassador {
         this.federateParameters = federateParameters;
     }
 
+    public FederateAttributes getFederateAttributes() {
+        FederateAttributes federateAttributes = new FederateAttributes();
+        federateAttributes.setName(federateParameters.getFederateName());
+        federateAttributes.setFederation(federateParameters.getFederationName());
+        federateAttributes.setStrategy(federateParameters.getStrategy());
+        federateAttributes.setTime(advanceTime.getTimeToMoveTo().getValue());
+        return federateAttributes;
+    }
+
     public void createAndJoin() {
         try {
             /**********************
@@ -113,9 +122,6 @@ public class Federate extends NullFederateAmbassador {
     }
 
     private AdvanceTime advanceTime;
-    public double getTimeToMoveTo() {
-        return advanceTime.getTimeToMoveTo().getValue();
-    }
     protected Timer timer = new Timer();
     public void run() {
         try {
@@ -143,8 +149,14 @@ public class Federate extends NullFederateAmbassador {
              **********************/
             HLAfloat64Interval mInterval = new HLAfloat64IntervalImpl(1);
             //_rtiAmbassador->enableAsynchronousDelivery();
-            _rtiAmbassador.enableTimeConstrained();
-            _rtiAmbassador.enableTimeRegulation(mInterval);
+            if( "Regulating".equals(federateParameters.getStrategy()) ) {
+                _rtiAmbassador.enableTimeRegulation(mInterval);
+            } else if( "Constrained".equals(federateParameters.getStrategy()) ) {
+                _rtiAmbassador.enableTimeConstrained();
+            } else {
+                _rtiAmbassador.enableTimeRegulation(mInterval);
+                _rtiAmbassador.enableTimeConstrained();
+            }
             HLAfloat64Time timeToMoveTo = new HLAfloat64TimeImpl(0);
             HLAfloat64Interval advancedStep = new HLAfloat64IntervalImpl(1);
             _rtiAmbassador.enableCallbacks();
