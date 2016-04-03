@@ -62,6 +62,7 @@
 <script src="assets/javascripts/angular-cookies.min.js"></script>
 <script src="assets/javascripts/angular-animate.min.js"></script>
 <script src="assets/javascripts/angular-sanitize.min.js"></script>
+<script src="assets/javascripts/d3.min.js"></script>
 <script src="assets/javascripts/app.js"></script>
 <script src="assets/javascripts/routes.js"></script>
 <script src="assets/javascripts/global-controller.js"></script>

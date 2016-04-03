@@ -69,6 +69,13 @@ public class FederatesController {
         return gson.toJson(federatesAttributesMap);
     }
 
+    @RequestMapping(value = "/federates/time/{federationName}/{federateName}")
+    @ResponseBody
+    public String getTime(@PathVariable String federationName,@PathVariable String federateName) {
+        Federate federate = mapFederation.get(federationName).get(federateName);
+        return federate.getTimeToMoveTo().toString();
+    }
+
     @RequestMapping(value = "/federates", method = RequestMethod.POST)
     @ResponseBody
     public String create(@RequestBody FederateParameters federateParameters) {
@@ -82,19 +89,36 @@ public class FederatesController {
             } else {
                 Federate federate = new Federate(federateParameters);
                 federate.createAndJoin();
-                federate.run();
                 mapFederate.put(federateName,federate);
             }
         } else {
             Map<String,Federate> mapFederate = new HashMap<String, Federate>();
             Federate federate = new Federate(federateParameters);
             federate.createAndJoin();
-            federate.run();
             mapFederate.put(federateName,federate);
             mapFederation.put(federationName,mapFederate);
         }
         ResponseValue responseValue = new ResponseValue("Success");
         return gson.toJson(responseValue);
+    }
+
+    @RequestMapping(value = "/federates/start", method = RequestMethod.POST)
+    @ResponseBody
+    public void start(@RequestBody FederateParameters federateParameters) {
+        Federate federate = mapFederation.get(federateParameters.getFederationName()).get(federateParameters.getFederateName());
+        if(federate.getStatus()) {
+            Thread thread = new Thread(federate);
+            thread.start();
+        } else {
+            federate.setStatus(true);
+        }
+    }
+
+    @RequestMapping(value = "/federates/pause", method = RequestMethod.POST)
+    @ResponseBody
+    public void pause(@RequestBody FederateParameters federateParameters) {
+        Federate federate = mapFederation.get(federateParameters.getFederationName()).get(federateParameters.getFederateName());
+        federate.setStatus(false);
     }
 
     @RequestMapping(value = "/federates", method = RequestMethod.PUT)
@@ -122,6 +146,7 @@ public class FederatesController {
         if(mapFederation.containsKey(federationName)) {
             if( mapFederation.get(federationName).containsKey(federateName) ) {
                 Federate federate = mapFederation.get(federationName).get(federateName);
+                federate.setState(false);
                 federate.destroy();
 
                 mapFederation.get(federationName).remove(federateName);

@@ -18,12 +18,22 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.cancel = function () {
     };
 
-    $scope.update = function (federate) {
-
+    $scope.run = function (federate) {
+        if(federate.startOrPause == 'Start') {
+            $http({method: "POST", url: "/federates/start", data: JSON.stringify($scope.request)}).success(function(data){
+                console.log(data);
+                federate.startOrPause = 'Pause';
+            });
+        } else if(federate.startOrPause = 'Pause') {
+            $http({method: "POST", url: "/federates/pause", data: JSON.stringify($scope.request)}).success(function (data) {
+               console.log(data);
+                federate.startOrPause = 'Start';
+            });
+        }
     };
 
     $scope.delete = function(federate) {
-        $http({method: "Delete", url: "/federates/" + federate.federation + "/" + federate.name }).success(function(data) {
+        $http({method: "DELETE", url: "/federates/" + federate.federation + "/" + federate.name }).success(function(data) {
             console.log(data);
             ctrl.updateFederates();
         });
@@ -42,26 +52,34 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
     this.updateFederates = function () {
         this.federate = {"name": "", "federation": "", "fom": "", "strategy": "", "time": ""};
-        $interval(function () {
-            $scope.federates = [];
-            $http({method: 'GET', url: '/federates'}).success(function (data) {
-                for (var federation in data) {
-                    var federates = data[federation]
-                    for (var federate in federates) {
-                        ctrl.federate = {
-                            "name": federate,
-                            "federation": federation,
-                            "fom": "",
-                            "strategy": federates[federate].strategy,
-                            "time": federates[federate].time
-                        };
-                        $scope.federates.push(ctrl.federate);
-                    }
+        $scope.federates = [];
+        $http({method: 'GET', url: '/federates'}).success(function (data) {
+            for (var federation in data) {
+                var federates = data[federation]
+                for (var federate in federates) {
+                    ctrl.federate = {
+                        "name": federate,
+                        "federation": federation,
+                        "fom": "",
+                        "strategy": federates[federate].strategy,
+                        "time": federates[federate].time,
+                        "startOrPause": "Start"
+                    };
+                    $scope.federates.push(ctrl.federate);
                 }
-            });
-        },2000);
+            }
+        });
     };
     this.updateFederates();
+
+    $interval(function () {
+        $scope.federates.map(function(item,i,s){
+            $http({method: "GET", url: "/federates/time/" + item.federation + "/" + item.name}).success(function (data) {
+                item.time = data;
+                s[i] = item;
+            });
+        });
+    }, 2000);
 }])
 .directive('createFederate', ['$http', '$timeout', '$location', function() {
     return {

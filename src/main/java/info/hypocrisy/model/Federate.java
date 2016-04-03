@@ -7,24 +7,19 @@ import hla.rti1516e.encoding.DecoderException;
 import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
-import hla.rti1516e.time.HLAfloat64TimeFactory;
-import org.springframework.web.context.WebApplicationContext;
 import se.pitch.prti1516e.time.HLAfloat64IntervalImpl;
 import se.pitch.prti1516e.time.HLAfloat64TimeImpl;
-import se.pitch.prti1516e.time.LogicalTimeIntervalDouble;
 
-import javax.annotation.Resources;
-import javax.servlet.ServletContext;
-import java.io.*;
 import java.util.*;
 import java.net.URL;
 /**
  * Created by Hypocrisy on 3/23/2016.
  * This class implements a NullFederateAmbassador.
  */
-public class Federate extends NullFederateAmbassador {
+public class Federate extends NullFederateAmbassador implements Runnable{
+    private boolean state = true;
+    private boolean status = true;
     private RTIambassador _rtiAmbassador;
-    private String[] _args;
     private InteractionClassHandle _messageId;
     private ParameterHandle _parameterIdText;
     private ParameterHandle _parameterIdSender;
@@ -36,33 +31,42 @@ public class Federate extends NullFederateAmbassador {
     private volatile boolean _reservationSucceeded;
     private final Object _reservationSemaphore = new Object();
 
-    private static final int CRC_PORT = 8989;
-    private static final String FEDERATION_NAME = "ChatRoom";
     private EncoderFactory _encoderFactory;
 
     private final Map<ObjectInstanceHandle, Participant> _knownObjects = new HashMap<ObjectInstanceHandle, Participant>();
 
     private static class Participant {
-        private final String _name;
+        private final String name;
 
         Participant(String name)
         {
-            _name = name;
+            this.name = name;
         }
 
         @Override
         public String toString()
         {
-            return _name;
+            return name;
         }
     }
 
-    public Federate(String[] args) {
-        this._args = args;
-    }
     private FederateParameters federateParameters;
     public Federate(FederateParameters federateParameters) {
         this.federateParameters = federateParameters;
+        this.timeToMoveTo = new HLAfloat64TimeImpl(0);
+    }
+
+    public boolean getState() {
+        return state;
+    }
+    public void setState(boolean state) {
+        this.state = state;
+    }
+    public boolean getStatus() {
+        return status;
+    }
+    public void setStatus(boolean status) {
+        this.status = status;
     }
 
     public FederateAttributes getFederateAttributes() {
@@ -70,8 +74,14 @@ public class Federate extends NullFederateAmbassador {
         federateAttributes.setName(federateParameters.getFederateName());
         federateAttributes.setFederation(federateParameters.getFederationName());
         federateAttributes.setStrategy(federateParameters.getStrategy());
-        federateAttributes.setTime(advanceTime.getTimeToMoveTo().getValue());
+        federateAttributes.setTime(this.getTimeToMoveTo());
         return federateAttributes;
+    }
+
+    private HLAfloat64Time timeToMoveTo;
+    private HLAfloat64Interval advancedStep;
+    public Double getTimeToMoveTo() {
+        return timeToMoveTo.getValue();
     }
 
     public void createAndJoin() {
@@ -104,7 +114,7 @@ public class Federate extends NullFederateAmbassador {
             /**********************
              * Create federation
              **********************/
-            String s = "http://localhost:8080/assets/config/Chat-evolved.xml";
+            String s = "http://localhost:8080/assets/config/HLADemo.xml";
             URL url = new URL(s);
             try {
                 _rtiAmbassador.createFederationExecution(federateParameters.getFederationName(), new URL[]{url}, "HLAfloat64Time");
@@ -115,17 +125,38 @@ public class Federate extends NullFederateAmbassador {
              * Join current federate(specified with this) into current federation(specified with _rtiAmbassador)
              **********************/
             _rtiAmbassador.joinFederationExecution(federateParameters.getFederateName(), federateParameters.getFederationName(), new URL[]{url});
+
+            /**********************
+             * Add by Hypocrisy on 03/28/2015
+             * Time Management Variables.
+             **********************/
+            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(4);
+            //_rtiAmbassador->enableAsynchronousDelivery();
+            if( "Regulating".equals(federateParameters.getStrategy()) ) {
+                _rtiAmbassador.enableTimeRegulation(lookahead);
+            } else if( "Constrained".equals(federateParameters.getStrategy()) ) {
+                _rtiAmbassador.enableTimeConstrained();
+            } else {
+                _rtiAmbassador.enableTimeRegulation(lookahead);
+                _rtiAmbassador.enableTimeConstrained();
+            }
+            timeToMoveTo = new HLAfloat64TimeImpl(0);
+            advancedStep = new HLAfloat64IntervalImpl(2);
+            _rtiAmbassador.enableCallbacks();
+
         } catch (Exception e) {
             System.out.println("Unable to join");
-            return;
         }
     }
 
-    private AdvanceTime advanceTime;
-    protected Timer timer = new Timer();
+    //private AdvanceTime advanceTime;
+    //protected Timer timer = new Timer();
+    @Override
     public void run() {
         try {
-            // Subscribe and publish interactions
+            /**********************
+             * Subscribe and publish interactions
+             **********************/
             _messageId = _rtiAmbassador.getInteractionClassHandle("Communication");
             _parameterIdText = _rtiAmbassador.getParameterHandle(_messageId, "Message");
             _parameterIdSender = _rtiAmbassador.getParameterHandle(_messageId, "Sender");
@@ -133,7 +164,9 @@ public class Federate extends NullFederateAmbassador {
             _rtiAmbassador.subscribeInteractionClass(_messageId);
             _rtiAmbassador.publishInteractionClass(_messageId);
 
-            // Subscribe and publish objects
+            /**********************
+             * Subscribe and publish objects
+             **********************/
             ObjectClassHandle participantId = _rtiAmbassador.getObjectClassHandle("Participant");
             _attributeIdName = _rtiAmbassador.getAttributeHandle(participantId, "Name");
 
@@ -144,24 +177,8 @@ public class Federate extends NullFederateAmbassador {
             _rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
 
             /**********************
-             * Add by Hypocrisy on 03/28/2015
-             * Time Management Variables.
+             * Reserve object instance name and register object instance
              **********************/
-            HLAfloat64Interval mInterval = new HLAfloat64IntervalImpl(1);
-            //_rtiAmbassador->enableAsynchronousDelivery();
-            if( "Regulating".equals(federateParameters.getStrategy()) ) {
-                _rtiAmbassador.enableTimeRegulation(mInterval);
-            } else if( "Constrained".equals(federateParameters.getStrategy()) ) {
-                _rtiAmbassador.enableTimeConstrained();
-            } else {
-                _rtiAmbassador.enableTimeRegulation(mInterval);
-                _rtiAmbassador.enableTimeConstrained();
-            }
-            HLAfloat64Time timeToMoveTo = new HLAfloat64TimeImpl(0);
-            HLAfloat64Interval advancedStep = new HLAfloat64IntervalImpl(1);
-            _rtiAmbassador.enableCallbacks();
-
-            // Reserve object instance name and register object instance
             do {
                 Calendar cal = Calendar.getInstance();
                 _username = "hecate" + cal.get(Calendar.SECOND);
@@ -179,7 +196,8 @@ public class Federate extends NullFederateAmbassador {
                         }
                     }
                     if (!_reservationSucceeded) {
-                        //System.out.println("Name already taken, try again.");
+                        System.out.println("Name already taken, try again.");
+                        return;
                     }
                 } catch (IllegalName e) {
                     //System.out.println("Illegal name. Try again.");
@@ -191,20 +209,30 @@ public class Federate extends NullFederateAmbassador {
 
             _userId = _rtiAmbassador.registerObjectInstance(participantId, _username);
 
-            advanceTime = new AdvanceTime(timeToMoveTo,advancedStep,_rtiAmbassador);
-            timer.schedule(advanceTime, 0, 1000);
+            //advanceTime = new AdvanceTime(timeToMoveTo,advancedStep,_rtiAmbassador);
+            //timer.schedule(advanceTime, 0, 2000);
+            while(state) {
+                if(status) {
+                    try {
+                        timeToMoveTo = timeToMoveTo.add(advancedStep);
+                        _rtiAmbassador.timeAdvanceRequest(timeToMoveTo);
+                    } catch (Exception e) {
+                        timeToMoveTo = timeToMoveTo.subtract(advancedStep);
+                    }
 
-            HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
+                    HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
 
-            String message = "Hello";
+                    String message = "Hello";
 
-            ParameterHandleValueMap parameters = _rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-            HLAunicodeString messageEncoder = _encoderFactory.createHLAunicodeString();
-            messageEncoder.setValue(message);
-            parameters.put(_parameterIdText, messageEncoder.toByteArray());
-            parameters.put(_parameterIdSender, nameEncoder.toByteArray());
-            _rtiAmbassador.sendInteraction(_messageId, parameters, null);
-
+                    ParameterHandleValueMap parameters = _rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+                    HLAunicodeString messageEncoder = _encoderFactory.createHLAunicodeString();
+                    messageEncoder.setValue(message);
+                    parameters.put(_parameterIdText, messageEncoder.toByteArray());
+                    parameters.put(_parameterIdSender, nameEncoder.toByteArray());
+                    _rtiAmbassador.sendInteraction(_messageId, parameters, null);
+                    //_rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo);
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -223,7 +251,7 @@ public class Federate extends NullFederateAmbassador {
             }
             _rtiAmbassador.disconnect();
             _rtiAmbassador = null;
-            timer.cancel();
+            //timer.cancel();
         } catch (Exception e) {
             e.printStackTrace();
         }

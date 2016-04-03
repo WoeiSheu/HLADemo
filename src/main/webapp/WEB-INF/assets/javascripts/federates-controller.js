@@ -13,4 +13,18 @@ angular.module('HLADemo').controller('FederatesController', ['$http', '$scope', 
             $scope.federatesWithTime = data;
         });
     }, 1000);
+
+    /*
+    var context = document.getElementById('xAxis').getContext("2d");
+    context.beginPath();
+    context.lineCap = "round";
+    context.moveTo(100, 150);
+    context.lineTo(200, 150);
+    context.lineWidth=8;
+    context.strokeStyle = "#ff0000";
+    context.fillStyle = "#ffcc00";
+    context.fill();
+    context.stroke();
+    context.closePath();
+    */
 }]);

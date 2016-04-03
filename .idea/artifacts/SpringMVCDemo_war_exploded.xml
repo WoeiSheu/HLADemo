@@ -54,6 +54,13 @@
           <element id="library" level="project" name="Maven: org.postgresql:postgresql:9.4-1206-jdbc42" />
           <element id="library" level="project" name="Maven: org.apache.tomcat:tomcat-jdbc:7.0.68" />
           <element id="library" level="project" name="Maven: org.apache.tomcat:tomcat-juli:7.0.68" />
+          <element id="library" level="project" name="prticore" />
+          <element id="library" level="project" name="prti1516e" />
+          <element id="library" level="project" name="prti" />
+          <element id="library" level="project" name="wrapper" />
+          <element id="library" level="project" name="booster1516" />
+          <element id="library" level="project" name="ewert" />
+          <element id="library" level="project" name="jgl3.1.0" />
         </element>
       </element>
       <element id="directory" name="META-INF">
