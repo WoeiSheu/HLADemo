@@ -11,7 +11,16 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
             console.log(data);
             $("#createFederate").modal('hide');
-            ctrl.updateFederates();
+            //ctrl.updateFederates();
+            var federate = {
+                "name": $scope.request.federateName,
+                "federation": $scope.request.federationName,
+                "fom": "",
+                "strategy": $scope.request.strategy,
+                "time": 0,
+                "startOrPause": "Start"
+            };
+            $scope.federates.push(federate);
         });
     };
 
@@ -20,13 +29,11 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
     $scope.run = function (federate) {
         if(federate.startOrPause == 'Start') {
-            $http({method: "POST", url: "/federates/start", data: JSON.stringify($scope.request)}).success(function(data){
-                console.log(data);
+            $http({method: "PUT", url: "/federates/start/" + federate.federation + "/" + federate.name}).success(function(data){
                 federate.startOrPause = 'Pause';
             });
         } else if(federate.startOrPause = 'Pause') {
-            $http({method: "POST", url: "/federates/pause", data: JSON.stringify($scope.request)}).success(function (data) {
-               console.log(data);
+            $http({method: "PUT", url: "/federates/pause/" + federate.federation + "/" + federate.name}).success(function (data) {
                 federate.startOrPause = 'Start';
             });
         }
@@ -35,7 +42,10 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.delete = function(federate) {
         $http({method: "DELETE", url: "/federates/" + federate.federation + "/" + federate.name }).success(function(data) {
             console.log(data);
-            ctrl.updateFederates();
+            //ctrl.updateFederates();
+            $scope.federates = $scope.federates.filter(function(item) {
+                return !(item.federation == federate.federation && item.name == federate.name);
+            });
         });
     };
 
@@ -50,14 +60,16 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
     $scope.availableStrategies = ["Regulating","Constrained","Regulating and Constrained"];
 
-    this.updateFederates = function () {
-        this.federate = {"name": "", "federation": "", "fom": "", "strategy": "", "time": ""};
+    /**********************
+     * Init or reset federates.
+     **********************/
+    this.initFederates = function () {
         $scope.federates = [];
         $http({method: 'GET', url: '/federates'}).success(function (data) {
             for (var federation in data) {
-                var federates = data[federation]
+                var federates = data[federation];
                 for (var federate in federates) {
-                    ctrl.federate = {
+                    var item = {
                         "name": federate,
                         "federation": federation,
                         "fom": "",
@@ -65,12 +77,12 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                         "time": federates[federate].time,
                         "startOrPause": "Start"
                     };
-                    $scope.federates.push(ctrl.federate);
+                    $scope.federates.push(item);
                 }
             }
         });
     };
-    this.updateFederates();
+    this.initFederates();
 
     $interval(function () {
         $scope.federates.map(function(item,i,s){

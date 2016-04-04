@@ -3,7 +3,7 @@
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://www.sisostds.org/schemas/IEEE1516-2010 http://www.sisostds.org/schemas/IEEE1516-DIF-2010.xsd">
    <modelIdentification>
-      <name>Chat.xml</name>
+      <name>HLADemo.xml</name>
       <type>FOM</type>
       <version>1.0</version>
       <modificationDate>2001-05-21</modificationDate>
@@ -32,7 +32,7 @@
       </reference>
       <reference>
          <type>Converted From</type>
-         <identification>Chat.xml</identification>
+         <identification>HLADemo.xml</identification>
       </reference>
    </modelIdentification>
    <objects>
@@ -48,7 +48,7 @@
                <ownership>DivestAcquire</ownership>
                <sharing>Neither</sharing>
                <transportation>HLAreliable</transportation>
-               <order>Receive</order>
+               <order>TimeStamp</order>
             </attribute>
          </objectClass>
       </objectClass>
@@ -60,7 +60,7 @@
             <name>Communication</name>
             <sharing>Publish</sharing>
             <transportation>HLAreliable</transportation>
-            <order>Receive</order>
+            <order>TimeStamp</order>
             <semantics>Communication</semantics>
             <parameter>
                <name>Message</name>

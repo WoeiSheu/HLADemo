@@ -214,6 +214,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             while(state) {
                 if(status) {
                     try {
+                        Thread.sleep(500);
                         timeToMoveTo = timeToMoveTo.add(advancedStep);
                         _rtiAmbassador.timeAdvanceRequest(timeToMoveTo);
                     } catch (Exception e) {

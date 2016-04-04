@@ -102,10 +102,10 @@ public class FederatesController {
         return gson.toJson(responseValue);
     }
 
-    @RequestMapping(value = "/federates/start", method = RequestMethod.POST)
+    @RequestMapping(value = "/federates/start/{federationName}/{federateName}", method = RequestMethod.PUT)
     @ResponseBody
-    public void start(@RequestBody FederateParameters federateParameters) {
-        Federate federate = mapFederation.get(federateParameters.getFederationName()).get(federateParameters.getFederateName());
+    public void start(@PathVariable String federationName, @PathVariable String federateName) {
+        Federate federate = mapFederation.get(federationName).get(federateName);
         if(federate.getStatus()) {
             Thread thread = new Thread(federate);
             thread.start();
@@ -114,10 +114,10 @@ public class FederatesController {
         }
     }
 
-    @RequestMapping(value = "/federates/pause", method = RequestMethod.POST)
+    @RequestMapping(value = "/federates/pause/{federationName}/{federateName}", method = RequestMethod.PUT)
     @ResponseBody
-    public void pause(@RequestBody FederateParameters federateParameters) {
-        Federate federate = mapFederation.get(federateParameters.getFederationName()).get(federateParameters.getFederateName());
+    public void pause(@PathVariable String federationName, @PathVariable String federateName) {
+        Federate federate = mapFederation.get(federationName).get(federateName);
         federate.setStatus(false);
     }
 
