@@ -10,6 +10,7 @@ public class FederateAttributes {
     private String fom;
     private String strategy;
     private Double time;
+    private Boolean status;
 
     public String getName() {
         return name;
@@ -26,6 +27,9 @@ public class FederateAttributes {
     public Double getTime() {
         return time;
     }
+    public Boolean getStatus() {
+        return status;
+    }
 
     public void setName(String name) {
         this.name = name;
@@ -41,5 +45,8 @@ public class FederateAttributes {
     }
     public void setTime(Double time) {
         this.time = time;
+    }
+    public void setStatus(Boolean status) {
+        this.status = status;
     }
 }

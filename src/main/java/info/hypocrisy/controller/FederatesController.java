@@ -106,12 +106,12 @@ public class FederatesController {
     @ResponseBody
     public void start(@PathVariable String federationName, @PathVariable String federateName) {
         Federate federate = mapFederation.get(federationName).get(federateName);
-        if(federate.getStatus()) {
+        if(federate.isFirst) {
             Thread thread = new Thread(federate);
             thread.start();
-        } else {
-            federate.setStatus(true);
+            federate.isFirst = false;
         }
+        federate.setStatus(true);
     }
 
     @RequestMapping(value = "/federates/pause/{federationName}/{federateName}", method = RequestMethod.PUT)

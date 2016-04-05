@@ -18,7 +18,7 @@ import java.net.URL;
  */
 public class Federate extends NullFederateAmbassador implements Runnable{
     private boolean state = true;
-    private boolean status = true;
+    private boolean status = false;
     private RTIambassador _rtiAmbassador;
     private InteractionClassHandle _messageId;
     private ParameterHandle _parameterIdText;
@@ -75,6 +75,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setFederation(federateParameters.getFederationName());
         federateAttributes.setStrategy(federateParameters.getStrategy());
         federateAttributes.setTime(this.getTimeToMoveTo());
+        federateAttributes.setStatus(status);
         return federateAttributes;
     }
 
@@ -130,7 +131,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
              * Add by Hypocrisy on 03/28/2015
              * Time Management Variables.
              **********************/
-            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(4);
+            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Integer.parseInt(federateParameters.getLookahead()) );
             //_rtiAmbassador->enableAsynchronousDelivery();
             if( "Regulating".equals(federateParameters.getStrategy()) ) {
                 _rtiAmbassador.enableTimeRegulation(lookahead);
@@ -141,7 +142,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 _rtiAmbassador.enableTimeConstrained();
             }
             timeToMoveTo = new HLAfloat64TimeImpl(0);
-            advancedStep = new HLAfloat64IntervalImpl(2);
+            advancedStep = new HLAfloat64IntervalImpl( Integer.parseInt(federateParameters.getStep()) );
             _rtiAmbassador.enableCallbacks();
 
         } catch (Exception e) {
@@ -151,6 +152,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
 
     //private AdvanceTime advanceTime;
     //protected Timer timer = new Timer();
+    public boolean isFirst = true;
     @Override
     public void run() {
         try {
@@ -212,9 +214,9 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             //advanceTime = new AdvanceTime(timeToMoveTo,advancedStep,_rtiAmbassador);
             //timer.schedule(advanceTime, 0, 2000);
             while(state) {
+                Thread.sleep(1000);
                 if(status) {
                     try {
-                        Thread.sleep(500);
                         timeToMoveTo = timeToMoveTo.add(advancedStep);
                         _rtiAmbassador.timeAdvanceRequest(timeToMoveTo);
                     } catch (Exception e) {
@@ -361,49 +363,5 @@ public class Federate extends NullFederateAmbassador implements Runnable{
 
     @Override
     public void timeAdvanceGrant(LogicalTime logicalTime) {
-    }
-
-    class AdvanceTime extends TimerTask {
-        private HLAfloat64Time timeToMoveTo;
-        private HLAfloat64Interval advancedStep;
-        private RTIambassador rtiAmbassador;
-        public AdvanceTime(HLAfloat64Time timeToMoveTo, HLAfloat64Interval advancedStep, RTIambassador rtiAmbassador) {
-            this.timeToMoveTo = timeToMoveTo;
-            this.advancedStep = advancedStep;
-            this.rtiAmbassador = rtiAmbassador;
-        }
-
-        public HLAfloat64Time getTimeToMoveTo() {
-            return timeToMoveTo;
-        }
-        @Override
-        public void run() {
-            try {
-                timeToMoveTo = timeToMoveTo.add(advancedStep);
-                rtiAmbassador.timeAdvanceRequest(timeToMoveTo);
-            } catch (IllegalTimeArithmetic illegalTimeArithmetic) {
-                illegalTimeArithmetic.printStackTrace();
-            } catch (LogicalTimeAlreadyPassed logicalTimeAlreadyPassed) {
-                logicalTimeAlreadyPassed.printStackTrace();
-            } catch (RequestForTimeRegulationPending requestForTimeRegulationPending) {
-                requestForTimeRegulationPending.printStackTrace();
-            } catch (SaveInProgress saveInProgress) {
-                saveInProgress.printStackTrace();
-            } catch (InvalidLogicalTime invalidLogicalTime) {
-                invalidLogicalTime.printStackTrace();
-            } catch (InTimeAdvancingState inTimeAdvancingState) {
-                inTimeAdvancingState.printStackTrace();
-            } catch (RestoreInProgress restoreInProgress) {
-                restoreInProgress.printStackTrace();
-            } catch (RequestForTimeConstrainedPending requestForTimeConstrainedPending) {
-                requestForTimeConstrainedPending.printStackTrace();
-            } catch (RTIinternalError rtIinternalError) {
-                rtIinternalError.printStackTrace();
-            } catch (FederateNotExecutionMember federateNotExecutionMember) {
-                federateNotExecutionMember.printStackTrace();
-            } catch (NotConnected notConnected) {
-                notConnected.printStackTrace();
-            }
-        }
     }
 }

@@ -10,6 +10,8 @@ public class FederateParameters{
     private String federationName;
     private String federateName;
     private String strategy;
+    private String step;
+    private String lookahead;
 
     public String getId() {
         return id;
@@ -26,6 +28,12 @@ public class FederateParameters{
     public String getStrategy() {
         return strategy;
     }
+    public String getStep() {
+        return step;
+    }
+    public String getLookahead() {
+        return lookahead;
+    }
 
     public void setId(String id) {
         this.id = id;
@@ -41,5 +49,11 @@ public class FederateParameters{
     }
     public void setStrategy(String strategy) {
         this.strategy = strategy;
+    }
+    public void setStep(String step) {
+        this.step = step;
+    }
+    public void setLookahead(String lookahead) {
+        this.lookahead = lookahead;
     }
 }

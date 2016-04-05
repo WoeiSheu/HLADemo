@@ -4,7 +4,7 @@
  */
 angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', function($http, $scope, $interval) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"localhost", "federationName": "", "federateName": "", "strategy": "Regulating" };
+    $scope.request = {"crcAddress":"localhost", "federationName": "", "federateName": "", "strategy": "Regulating", "step": "", "lookahead": ""};
     console.log(JSON.stringify($scope.request));
 
     $scope.create = function() {
@@ -32,7 +32,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
             $http({method: "PUT", url: "/federates/start/" + federate.federation + "/" + federate.name}).success(function(data){
                 federate.startOrPause = 'Pause';
             });
-        } else if(federate.startOrPause = 'Pause') {
+        } else if(federate.startOrPause == 'Pause') {
             $http({method: "PUT", url: "/federates/pause/" + federate.federation + "/" + federate.name}).success(function (data) {
                 federate.startOrPause = 'Start';
             });
@@ -75,8 +75,8 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                         "fom": "",
                         "strategy": federates[federate].strategy,
                         "time": federates[federate].time,
-                        "startOrPause": "Start"
                     };
+                    federates[federate].status ? item.startOrPause = "Pause" : item.startOrPause = "Start";
                     $scope.federates.push(item);
                 }
             }
