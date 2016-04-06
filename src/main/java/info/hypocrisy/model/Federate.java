@@ -1,5 +1,6 @@
 package info.hypocrisy.model;
 
+import com.sun.org.apache.bcel.internal.generic.VariableLengthInstruction;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
 import hla.rti1516e.encoding.HLAunicodeString;
@@ -48,6 +49,21 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         {
             return name;
         }
+    }
+
+    public Federate() {
+        // For test
+        federateAttributes = new FederateAttributes();
+        federateAttributes.setName("TestFederate");
+        federateAttributes.setFederation("TestFederation");
+        federateAttributes.setCrcAddress("localhost");
+        federateAttributes.setFomName("HLADemo");
+        federateAttributes.setFomUrl("http://localhost:8080/assets/config/HLADemo.xml");
+        federateAttributes.setStrategy("Regulating and Constrained");
+        //federateAttributes.setTime(this.getTimeToMoveTo());
+        //federateAttributes.setStatus(status);
+        federateAttributes.setStep("1");
+        federateAttributes.setLookahead("1");
     }
 
     private FederateAttributes federateAttributes;
@@ -302,18 +318,103 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     _rtiAmbassador.sendInteraction(_messageId, parameters, null);
                     //_rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo);
                 }
-
-                boolean test = false;
-                if(test) {
-                    try {
-                        _rtiAmbassador.nextMessageRequest(timeToMoveTo);
-                    } catch (Exception e) {
-
-                    }
-                }
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void test() {
+        try {
+            /**********************
+             * Subscribe and publish interactions
+             **********************/
+            _messageId = _rtiAmbassador.getInteractionClassHandle("Communication");
+            _parameterIdText = _rtiAmbassador.getParameterHandle(_messageId, "Message");
+            _parameterIdSender = _rtiAmbassador.getParameterHandle(_messageId, "Sender");
+
+            _rtiAmbassador.subscribeInteractionClass(_messageId);
+            _rtiAmbassador.publishInteractionClass(_messageId);
+
+            /**********************
+             * Subscribe and publish objects
+             **********************/
+            ObjectClassHandle participantId = _rtiAmbassador.getObjectClassHandle("Participant");
+            _attributeIdName = _rtiAmbassador.getAttributeHandle(participantId, "Name");
+
+            AttributeHandleSet attributeSet = _rtiAmbassador.getAttributeHandleSetFactory().create();
+            attributeSet.add(_attributeIdName);
+
+            _rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
+            _rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
+
+            /**********************
+             * Reserve object instance name and register object instance
+             **********************/
+            /*
+            do {
+                Calendar cal = Calendar.getInstance();
+                _username = "hecate" + cal.get(Calendar.SECOND);
+
+                try {
+                    _reservationComplete = false;
+                    _rtiAmbassador.reserveObjectInstanceName(_username);
+                    synchronized (_reservationSemaphore) {
+                        // Wait for response from RTI
+                        while (!_reservationComplete) {
+                            try {
+                                _reservationSemaphore.wait();
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
+                    }
+                    if (!_reservationSucceeded) {
+                        System.out.println("Name already taken, try again.");
+                        return;
+                    }
+                } catch (IllegalName e) {
+                    //System.out.println("Illegal name. Try again.");
+                } catch (RTIexception e) {
+                    //System.out.println("RTI exception when reserving name: " + e.getMessage());
+                    return;
+                }
+            } while (!_reservationSucceeded);
+
+            _userId = _rtiAmbassador.registerObjectInstance(participantId, _username);
+            */
+
+            _rtiAmbassador.enableAsynchronousDelivery();
+            String SYNC_POINT = "ReadyToRun";
+            byte[] tag = {};
+            try {
+                _rtiAmbassador.registerFederationSynchronizationPoint(SYNC_POINT, tag);
+            } catch (Exception e) {
+
+            }
+            try {
+                _rtiAmbassador.synchronizationPointAchieved(SYNC_POINT);
+            } catch (RTIexception e) {
+
+            }
+            while(true) {
+                try {
+                    //HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
+                    String message = "Hello";
+
+                    ParameterHandleValueMap parameters = _rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+                    HLAunicodeString messageEncoder = _encoderFactory.createHLAunicodeString();
+                    messageEncoder.setValue(message);
+                    parameters.put(_parameterIdText, messageEncoder.toByteArray());
+                    //parameters.put(_parameterIdSender, nameEncoder.toByteArray());
+                    timeToMoveTo = timeToMoveTo.add(advancedStep);
+                    _rtiAmbassador.nextMessageRequest(timeToMoveTo);
+                    _rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo);
+                } catch (RTIexception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+
         }
     }
 
