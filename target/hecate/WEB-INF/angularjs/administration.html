@@ -25,7 +25,7 @@
                 <tr ng-repeat="federate in federates">
                     <td>{{federate.name}}</td>
                     <td>{{federate.federation}}</td>
-                    <td>{{federate.fom}}</td>
+                    <td><a ng-href="{{federate.fomUrl}}">{{federate.fom}}</a></td>
                     <td>{{federate.strategy}}</td>
                     <td>{{federate.time}}</td>
                     <td>
@@ -33,9 +33,9 @@
                         <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:green" aria-hidden="true" data-toggle="modal" data-target="#editFederate" ng-click="edit(federate)">Edit</button>
                     </td>
                     <td>
-                        <span class="glyphicon glyphicon-play" style="color:green" ng-show="federate.startOrPause == 'Start'"></span>
+                        <span class="glyphicon glyphicon-play" style="color:blue" ng-show="federate.startOrPause == 'Start'"></span>
                         <span class="glyphicon glyphicon-pause" style="color:red" ng-show="federate.startOrPause == 'Pause'"></span>
-                        <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:green" ng-click="run(federate)">{{federate.startOrPause}}</button>
+                        <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:blue" ng-click="run(federate)">{{federate.startOrPause}}</button>
                         | <span class="glyphicon glyphicon-trash" style="color:#a94442"></span>
                         <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:#a94442" ng-click="delete(federate)">Delete</button>
                     </td>

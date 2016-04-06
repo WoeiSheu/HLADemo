@@ -50,10 +50,20 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         }
     }
 
-    private FederateParameters federateParameters;
+    private FederateAttributes federateAttributes;
     public Federate(FederateParameters federateParameters) {
-        this.federateParameters = federateParameters;
-        this.timeToMoveTo = new HLAfloat64TimeImpl(0);
+        federateAttributes = new FederateAttributes();
+        federateAttributes.setName(federateParameters.getFederateName());
+        federateAttributes.setFederation(federateParameters.getFederationName());
+        federateAttributes.setCrcAddress(federateParameters.getCrcAddress());
+        String[] tmp = federateParameters.getFomUrl().split("/");
+        federateAttributes.setFomName(tmp[tmp.length - 1]);
+        federateAttributes.setFomUrl(federateParameters.getFomUrl());
+        federateAttributes.setStrategy(federateParameters.getStrategy());
+        //federateAttributes.setTime(this.getTimeToMoveTo());
+        //federateAttributes.setStatus(status);
+        federateAttributes.setStep(federateParameters.getStep());
+        federateAttributes.setLookahead(federateParameters.getLookahead());
     }
 
     public boolean getState() {
@@ -70,16 +80,8 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     }
 
     public FederateAttributes getFederateAttributes() {
-        FederateAttributes federateAttributes = new FederateAttributes();
-        federateAttributes.setName(federateParameters.getFederateName());
-        federateAttributes.setFederation(federateParameters.getFederationName());
-        String[] tmp = federateParameters.getFomUrl().split("/");
-        federateAttributes.setFom(tmp[tmp.length-1]);
-        federateAttributes.setStrategy(federateParameters.getStrategy());
-        federateAttributes.setTime(this.getTimeToMoveTo());
+        federateAttributes.setTime(timeToMoveTo.getValue());
         federateAttributes.setStatus(status);
-        federateAttributes.setStep(federateParameters.getStep());
-        federateAttributes.setLookahead(federateParameters.getLookahead());
         return federateAttributes;
     }
 
@@ -103,7 +105,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 return;
             }
 
-            String crcAddress = federateParameters.getCrcAddress();
+            String crcAddress = federateAttributes.getCrcAddress();
             String settingsDesignator = "crcAddress=" + crcAddress;
             _rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
 
@@ -111,7 +113,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
              * Clean up old federation
              **********************/
             try {
-                _rtiAmbassador.destroyFederationExecution(federateParameters.getFederationName());
+                _rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
             } catch (FederatesCurrentlyJoined ignored) {
             } catch (FederationExecutionDoesNotExist ignored) {
             }
@@ -120,28 +122,28 @@ public class Federate extends NullFederateAmbassador implements Runnable{
              * Create federation
              **********************/
             //String s = "http://localhost:8080/assets/config/HLADemo.xml";
-            URL url = new URL(federateParameters.getFomUrl());
+            URL url = new URL(federateAttributes.getFomUrl());
             try {
-                _rtiAmbassador.createFederationExecution(federateParameters.getFederationName(), new URL[]{url}, "HLAfloat64Time");
+                _rtiAmbassador.createFederationExecution(federateAttributes.getFederation(), new URL[]{url}, "HLAfloat64Time");
             } catch (FederationExecutionAlreadyExists ignored) {
             }
 
             /**********************
              * Join current federate(specified with this) into current federation(specified with _rtiAmbassador)
              **********************/
-            _rtiAmbassador.joinFederationExecution(federateParameters.getFederateName(), federateParameters.getFederationName(), new URL[]{url});
+            _rtiAmbassador.joinFederationExecution(federateAttributes.getName(), federateAttributes.getFederation(), new URL[]{url});
 
             /**********************
              * Add by Hypocrisy on 03/28/2015
              * Time Management Variables.
              **********************/
-            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(federateParameters.getLookahead()) );
+            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getLookahead()) );
             //_rtiAmbassador->enableAsynchronousDelivery();
-            if ("Regulating".equals(federateParameters.getStrategy())) {
+            if ("Regulating".equals(federateAttributes.getStrategy())) {
                 _rtiAmbassador.enableTimeRegulation(lookahead);
-            } else if ("Constrained".equals(federateParameters.getStrategy())) {
+            } else if ("Constrained".equals(federateAttributes.getStrategy())) {
                 _rtiAmbassador.enableTimeConstrained();
-            } else if("Regulating and Constrained".equals(federateParameters.getStrategy())){
+            } else if("Regulating and Constrained".equals(federateAttributes.getStrategy())){
                 _rtiAmbassador.enableTimeRegulation(lookahead);
                 _rtiAmbassador.enableTimeConstrained();
             } else {
@@ -149,7 +151,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 //_rtiAmbassador.disableTimeConstrained();
             }
             timeToMoveTo = new HLAfloat64TimeImpl(0);
-            advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateParameters.getStep()) );
+            advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getStep()) );
             _rtiAmbassador.enableCallbacks();
         } catch (Exception e) {
             System.out.println("Unable to join");
@@ -157,14 +159,14 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     }
 
     public void update(UpdateParameters updateParameters) {
-        federateParameters.setStrategy(updateParameters.getStrategy());
-        federateParameters.setStep(updateParameters.getStep());
-        federateParameters.setLookahead(updateParameters.getLookahead());
+        federateAttributes.setStrategy(updateParameters.getStrategy());
+        federateAttributes.setStep(updateParameters.getStep());
+        federateAttributes.setLookahead(updateParameters.getLookahead());
 
         HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getLookahead()) );
         //_rtiAmbassador->enableAsynchronousDelivery();
         try {
-            if ("Regulating".equals(federateParameters.getStrategy())) {
+            if ("Regulating".equals(federateAttributes.getStrategy())) {
                 try {
                     _rtiAmbassador.enableTimeRegulation(lookahead);
                 } catch (Exception e) {
@@ -177,7 +179,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 } catch (Exception e) {
                     System.out.println("Time constrained has't been enabled");
                 }
-            } else if ("Constrained".equals(federateParameters.getStrategy())) {
+            } else if ("Constrained".equals(federateAttributes.getStrategy())) {
                 try {
                     _rtiAmbassador.enableTimeConstrained();
                 } catch (Exception e) {
@@ -188,7 +190,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 } catch (Exception e) {
                     System.out.println("Time regulating has't been enabled");
                 }
-            } else if ("Regulating and Constrained".equals(federateParameters.getStrategy())) {
+            } else if ("Regulating and Constrained".equals(federateAttributes.getStrategy())) {
                 try {
                     _rtiAmbassador.enableTimeRegulation(lookahead);
                 } catch (Exception e) {
@@ -319,7 +321,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         try {
             _rtiAmbassador.resignFederationExecution(ResignAction.DELETE_OBJECTS_THEN_DIVEST);
             try {
-                _rtiAmbassador.destroyFederationExecution(federateParameters.getFederationName());
+                _rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
             } catch (FederatesCurrentlyJoined ignored) {
             }
             _rtiAmbassador.disconnect();

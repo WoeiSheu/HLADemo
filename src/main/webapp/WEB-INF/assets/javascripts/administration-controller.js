@@ -15,9 +15,10 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
             var federate = {
                 "name": $scope.request.federateName,
                 "federation": $scope.request.federationName,
+                "fomUrl": $scope.request.fomUrl,
                 "fom": $scope.request.fomUrl.split('/').pop(),
                 "strategy": $scope.request.strategy,
-                "time": 0,
+                "time": "0.00",
                 "step": $scope.request.step,
                 "lookahead": $scope.request.lookahead,
                 "startOrPause": "Start"
@@ -105,7 +106,8 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                     var item = {
                         "name": federate,
                         "federation": federation,
-                        "fom": federates[federate].fom,
+                        "fomUrl": federates[federate].fomUrl,
+                        "fom": federates[federate].fomName,
                         "strategy": federates[federate].strategy,
                         "time": federates[federate].time.toFixed(2),
                         "step": federates[federate].step,
