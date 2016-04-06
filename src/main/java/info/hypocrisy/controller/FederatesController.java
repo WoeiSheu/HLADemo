@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import info.hypocrisy.model.Federate;
 import info.hypocrisy.model.FederateAttributes;
 import info.hypocrisy.model.FederateParameters;
+import info.hypocrisy.model.UpdateParameters;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -138,6 +139,14 @@ public class FederatesController {
         return gson.toJson(responseValue);
     }
 
+    @RequestMapping(value = "/federates/update/{federationName}/{federateName}", method = RequestMethod.PUT)
+    @ResponseBody
+    public String update(@PathVariable String federationName, @PathVariable String federateName, @RequestBody UpdateParameters updateParameters) {
+        Federate federate = mapFederation.get(federationName).get(federateName);
+        federate.update(updateParameters);
+        return "{\"status\":\"Success\"}";
+    }
+
     @RequestMapping(value = "/federates/start/{federationName}/{federateName}", method = RequestMethod.PUT)
     @ResponseBody
     public void start(@PathVariable String federationName, @PathVariable String federateName) {
@@ -155,25 +164,6 @@ public class FederatesController {
     public void pause(@PathVariable String federationName, @PathVariable String federateName) {
         Federate federate = mapFederation.get(federationName).get(federateName);
         federate.setStatus(false);
-    }
-
-    @RequestMapping(value = "/federates", method = RequestMethod.PUT)
-    @ResponseBody
-    public String update(@RequestBody FederateParameters federateParameters) {
-        String federationName = federateParameters.getFederationName();
-        String federateName = federateParameters.getFederateName();
-        if(mapFederation.containsKey(federationName)) {
-            if( mapFederation.get(federationName).containsKey(federateName) ) {
-                Federate federate = mapFederation.get(federationName).get(federateName);
-                federate.update();
-
-                ResponseValue responseValue = new ResponseValue("Success");
-                return gson.toJson(responseValue);
-            }
-        }
-
-        ResponseValue responseValue = new ResponseValue("Failure");
-        return gson.toJson(responseValue);
     }
 
     @RequestMapping(value = "/federates/{federationName}/{federateName}",method = RequestMethod.DELETE)

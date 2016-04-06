@@ -18,6 +18,8 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                 "fom": "",
                 "strategy": $scope.request.strategy,
                 "time": 0,
+                "step": $scope.request.step,
+                "lookahead": $scope.request.lookahead,
                 "startOrPause": "Start"
             };
             $scope.federates.push(federate);
@@ -25,6 +27,24 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     };
 
     $scope.cancel = function () {
+    };
+
+    $scope.edit = function(federate) {
+        ctrl.federate = federate;
+        //ctrl.backup_federate = $.extend(true, {}, federate);
+        $scope.updateInfo = {
+            "strategy": federate.strategy,
+            "step": federate.step,
+            "lookahead": federate.lookahead
+        };
+    };
+    $scope.update = function (federate) {
+        $http({method: "PUT", url: "/federates/update/" + federate.federation + "/" + federate.name, data: $scope.updateInfo}).success(function (data) {
+            ctrl.federate.strategy = $scope.updateInfo.strategy;
+            ctrl.federate.step = $scope.updateInfo.step;
+            ctrl.federate.lookahead = $scope.updateInfo.lookahead;
+        });
+        $("#editFederate").modal("hide");
     };
 
     $scope.run = function (federate) {
@@ -71,7 +91,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
         });
     };
 
-    $scope.availableStrategies = ["Regulating","Constrained","Regulating and Constrained"];
+    $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
     /**********************
      * Init or reset federates.
@@ -88,6 +108,8 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                         "fom": "",
                         "strategy": federates[federate].strategy,
                         "time": federates[federate].time,
+                        "step": federates[federate].step,
+                        "lookahead": federates[federate].lookahead
                     };
                     federates[federate].status ? item.startOrPause = "Pause" : item.startOrPause = "Start";
                     $scope.federates.push(item);
@@ -114,4 +136,13 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
             $("#createFederate").draggable({});
         }
    };
+}])
+.directive('editFederate', ['$http', '$timeout', '$location', function() {
+    return {
+        restrict: 'E', // E = Element, A = Attribute, C = Class, M = Comment
+        templateUrl: 'angularjs/edit-federate.html',
+        link: function(scope, iElm, iAttrs, controller) {
+            $("#editFederate").draggable({});
+        }
+    };
 }]);

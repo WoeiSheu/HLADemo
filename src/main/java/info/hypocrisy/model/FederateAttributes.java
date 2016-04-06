@@ -11,7 +11,15 @@ public class FederateAttributes {
     private String strategy;
     private Double time;
     private Boolean status;
+    private String step;
+    private String lookahead;
 
+    public String getStep() {
+        return step;
+    }
+    public String getLookahead() {
+        return lookahead;
+    }
     public String getName() {
         return name;
     }
@@ -31,6 +39,12 @@ public class FederateAttributes {
         return status;
     }
 
+    public void setStep(String step) {
+        this.step = step;
+    }
+    public void setLookahead(String lookahead) {
+        this.lookahead = lookahead;
+    }
     public void setName(String name) {
         this.name = name;
     }

@@ -76,6 +76,8 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setStrategy(federateParameters.getStrategy());
         federateAttributes.setTime(this.getTimeToMoveTo());
         federateAttributes.setStatus(status);
+        federateAttributes.setStep(federateParameters.getStep());
+        federateAttributes.setLookahead(federateParameters.getLookahead());
         return federateAttributes;
     }
 
@@ -133,25 +135,88 @@ public class Federate extends NullFederateAmbassador implements Runnable{
              **********************/
             HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(federateParameters.getLookahead()) );
             //_rtiAmbassador->enableAsynchronousDelivery();
-            if( "Regulating".equals(federateParameters.getStrategy()) ) {
+            if ("Regulating".equals(federateParameters.getStrategy())) {
                 _rtiAmbassador.enableTimeRegulation(lookahead);
-            } else if( "Constrained".equals(federateParameters.getStrategy()) ) {
+            } else if ("Constrained".equals(federateParameters.getStrategy())) {
+                _rtiAmbassador.enableTimeConstrained();
+            } else if("Regulating and Constrained".equals(federateParameters.getStrategy())){
+                _rtiAmbassador.enableTimeRegulation(lookahead);
                 _rtiAmbassador.enableTimeConstrained();
             } else {
-                _rtiAmbassador.enableTimeRegulation(lookahead);
-                _rtiAmbassador.enableTimeConstrained();
+                //_rtiAmbassador.disableTimeRegulation();   // If it is not enabled, this method will throw exception.
+                //_rtiAmbassador.disableTimeConstrained();
             }
             timeToMoveTo = new HLAfloat64TimeImpl(0);
             advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateParameters.getStep()) );
             _rtiAmbassador.enableCallbacks();
-
         } catch (Exception e) {
             System.out.println("Unable to join");
         }
     }
 
-    //private AdvanceTime advanceTime;
-    //protected Timer timer = new Timer();
+    public void update(UpdateParameters updateParameters) {
+        federateParameters.setStrategy(updateParameters.getStrategy());
+        federateParameters.setStep(updateParameters.getStep());
+        federateParameters.setLookahead(updateParameters.getLookahead());
+
+        HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getLookahead()) );
+        //_rtiAmbassador->enableAsynchronousDelivery();
+        try {
+            if ("Regulating".equals(federateParameters.getStrategy())) {
+                try {
+                    _rtiAmbassador.enableTimeRegulation(lookahead);
+                } catch (Exception e) {
+                    _rtiAmbassador.disableTimeRegulation();
+                    _rtiAmbassador.enableTimeRegulation(lookahead);
+                    System.out.println("Time regulating already enabled");
+                }
+                try {
+                    _rtiAmbassador.disableTimeConstrained();
+                } catch (Exception e) {
+                    System.out.println("Time constrained has't been enabled");
+                }
+            } else if ("Constrained".equals(federateParameters.getStrategy())) {
+                try {
+                    _rtiAmbassador.enableTimeConstrained();
+                } catch (Exception e) {
+                    System.out.println("Time constrained already enabled");
+                }
+                try {
+                    _rtiAmbassador.disableTimeRegulation();
+                } catch (Exception e) {
+                    System.out.println("Time regulating has't been enabled");
+                }
+            } else if ("Regulating and Constrained".equals(federateParameters.getStrategy())) {
+                try {
+                    _rtiAmbassador.enableTimeRegulation(lookahead);
+                } catch (Exception e) {
+                    _rtiAmbassador.disableTimeRegulation();
+                    _rtiAmbassador.enableTimeRegulation(lookahead);
+                    System.out.println("Time regulating already enabled");
+                }
+                try {
+                    _rtiAmbassador.enableTimeConstrained();
+                } catch (Exception e) {
+                    System.out.println("Time Constrained already enabled");
+                }
+            } else {
+                try {
+                    _rtiAmbassador.disableTimeRegulation();
+                } catch (Exception e) {
+                    System.out.println("Time regulating has't been enabled");
+                }
+                try {
+                    _rtiAmbassador.disableTimeConstrained();
+                } catch (Exception e) {
+                    System.out.println("Time constrained has't been enabled");
+                }
+            }
+        } catch (Exception e) {
+
+        }
+        advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getStep()) );
+    }
+
     public boolean isFirst = true;
     @Override
     public void run() {
@@ -211,8 +276,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
 
             _userId = _rtiAmbassador.registerObjectInstance(participantId, _username);
 
-            //advanceTime = new AdvanceTime(timeToMoveTo,advancedStep,_rtiAmbassador);
-            //timer.schedule(advanceTime, 0, 2000);
             while(state) {
                 Thread.sleep(1000);
                 if(status) {
@@ -248,10 +311,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public void update() {
-
     }
 
     public void destroy() {
