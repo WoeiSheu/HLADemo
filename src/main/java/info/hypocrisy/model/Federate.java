@@ -73,6 +73,8 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         FederateAttributes federateAttributes = new FederateAttributes();
         federateAttributes.setName(federateParameters.getFederateName());
         federateAttributes.setFederation(federateParameters.getFederationName());
+        String[] tmp = federateParameters.getFomUrl().split("/");
+        federateAttributes.setFom(tmp[tmp.length-1]);
         federateAttributes.setStrategy(federateParameters.getStrategy());
         federateAttributes.setTime(this.getTimeToMoveTo());
         federateAttributes.setStatus(status);
