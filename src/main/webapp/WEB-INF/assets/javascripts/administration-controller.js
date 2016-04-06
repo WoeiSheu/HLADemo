@@ -4,7 +4,7 @@
  */
 angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', function($http, $scope, $interval) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"localhost", "federationName": "", "federateName": "", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.request = {"crcAddress":"localhost", "federationName": "", "federateName": "", "fomUrl": "http://localhost:8080/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
     console.log(JSON.stringify($scope.request));
 
     $scope.create = function() {
@@ -56,6 +56,19 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
     $scope.upload = function (files) {
         //$scope.request.fomFile = files[0];
+        var fd = new FormData();
+        fd.append("file", files[0]);
+        var url;
+        if($scope.source == 'fom') {
+            url = "/federates/fomFile";
+        } else {
+            return;
+        }
+
+        $http({method: "POST", url: url, headers: {'Content-Type': undefined}, transformRequest: angular.identity, data: fd}).success(function (data) {
+            //console.log(data);
+            $scope.request.fomUrl = data.url;
+        });
     };
 
     $scope.availableStrategies = ["Regulating","Constrained","Regulating and Constrained"];
@@ -85,13 +98,13 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     this.initFederates();
 
     $interval(function () {
-        $scope.federates.map(function(item,i,s){
+        $scope.federates.forEach(function(item,i,s){
             $http({method: "GET", url: "/federates/time/" + item.federation + "/" + item.name}).success(function (data) {
-                item.time = data;
+                item.time = data.toFixed(2);
                 s[i] = item;
             });
         });
-    }, 2000);
+    }, 1000);
 }])
 .directive('createFederate', ['$http', '$timeout', '$location', function() {
     return {

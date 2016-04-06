@@ -14,17 +14,26 @@ angular.module('HLADemo').controller('FederatesController', ['$http', '$scope', 
         });
     }, 1000);
 
-    /*
+    /**********************
+     * Created by Hypocrisy.
+     * Draw x Axis.
+     **********************/
+    var lineLength = 1000;
+    var intervalLength = 10;
+    //$('#xAxis').css('width',lineLength);
     var context = document.getElementById('xAxis').getContext("2d");
     context.beginPath();
     context.lineCap = "round";
-    context.moveTo(100, 150);
-    context.lineTo(200, 150);
-    context.lineWidth=8;
+    context.moveTo(0, 10);
+    context.lineTo(lineLength, 10);
+    context.lineWidth=2;
+    for(var i = 0; i < lineLength; i+=intervalLength) {
+        context.moveTo(i,10);
+        context.lineTo(i,0);
+    }
     context.strokeStyle = "#ff0000";
     context.fillStyle = "#ffcc00";
     context.fill();
     context.stroke();
     context.closePath();
-    */
 }]);

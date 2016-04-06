@@ -7,7 +7,13 @@ import info.hypocrisy.model.FederateAttributes;
 import info.hypocrisy.model.FederateParameters;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.*;
 
 /**
@@ -22,6 +28,7 @@ public class FederatesController {
 
     private class ResponseValue {
         private String status;
+        private String url;
 
         public ResponseValue() {
             this.status = "Success";
@@ -33,9 +40,15 @@ public class FederatesController {
         public String getStatus() {
             return status;
         }
+        public String getUrl() {
+            return url;
+        }
 
         public void setStatus(String status) {
             this.status = status;
+        }
+        public void setUrl(String url) {
+            this.url = url;
         }
     }
 
@@ -99,6 +112,29 @@ public class FederatesController {
             mapFederation.put(federationName,mapFederate);
         }
         ResponseValue responseValue = new ResponseValue("Success");
+        return gson.toJson(responseValue);
+    }
+
+    @RequestMapping(value = "/federates/fomFile", method = RequestMethod.POST)
+    @ResponseBody
+    public String uploadFomFile(MultipartHttpServletRequest request, HttpServletResponse response) {
+        //FileSystemResource resource = new FileSystemResource("/WEB-INF/assets/config/some.xml");
+        Iterator<String> iter = request.getFileNames();
+        MultipartFile file = request.getFile(iter.next());
+        String fileName = file.getOriginalFilename();
+        String rootPath = request.getSession().getServletContext().getRealPath("/WEB-INF/");
+        String folder = rootPath + "/assets/config/";
+        File serverFile = new File(folder,fileName);
+        try {
+            BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(serverFile));
+            stream.write(file.getBytes());
+            stream.close();
+        } catch (Exception e) {
+            return "{\"status\":\"Failure\"}";
+        }
+
+        ResponseValue responseValue = new ResponseValue("Success");
+        responseValue.setUrl("http://localhost:8080/assets/config/" + fileName);
         return gson.toJson(responseValue);
     }
 

@@ -115,8 +115,8 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             /**********************
              * Create federation
              **********************/
-            String s = "http://localhost:8080/assets/config/HLADemo.xml";
-            URL url = new URL(s);
+            //String s = "http://localhost:8080/assets/config/HLADemo.xml";
+            URL url = new URL(federateParameters.getFomUrl());
             try {
                 _rtiAmbassador.createFederationExecution(federateParameters.getFederationName(), new URL[]{url}, "HLAfloat64Time");
             } catch (FederationExecutionAlreadyExists ignored) {
@@ -131,7 +131,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
              * Add by Hypocrisy on 03/28/2015
              * Time Management Variables.
              **********************/
-            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Integer.parseInt(federateParameters.getLookahead()) );
+            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(federateParameters.getLookahead()) );
             //_rtiAmbassador->enableAsynchronousDelivery();
             if( "Regulating".equals(federateParameters.getStrategy()) ) {
                 _rtiAmbassador.enableTimeRegulation(lookahead);
@@ -142,7 +142,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 _rtiAmbassador.enableTimeConstrained();
             }
             timeToMoveTo = new HLAfloat64TimeImpl(0);
-            advancedStep = new HLAfloat64IntervalImpl( Integer.parseInt(federateParameters.getStep()) );
+            advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateParameters.getStep()) );
             _rtiAmbassador.enableCallbacks();
 
         } catch (Exception e) {
@@ -234,6 +234,15 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     parameters.put(_parameterIdSender, nameEncoder.toByteArray());
                     _rtiAmbassador.sendInteraction(_messageId, parameters, null);
                     //_rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo);
+                }
+
+                boolean test = false;
+                if(test) {
+                    try {
+                        _rtiAmbassador.nextMessageRequest(timeToMoveTo);
+                    } catch (Exception e) {
+
+                    }
                 }
             }
         } catch (Exception e) {
