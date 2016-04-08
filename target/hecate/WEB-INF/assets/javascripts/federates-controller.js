@@ -18,22 +18,36 @@ angular.module('HLADemo').controller('FederatesController', ['$http', '$scope', 
      * Created by Hypocrisy.
      * Draw x Axis.
      **********************/
-    var lineLength = 1000;
-    var intervalLength = 10;
-    //$('#xAxis').css('width',lineLength);
-    var context = document.getElementById('xAxis').getContext("2d");
-    context.beginPath();
-    context.lineCap = "round";
-    context.moveTo(0, 10);
-    context.lineTo(lineLength, 10);
-    context.lineWidth=2;
-    for(var i = 0; i < lineLength; i+=intervalLength) {
-        context.moveTo(i,10);
-        context.lineTo(i,0);
+    var drawXAxis = function(canvasID,offset, intervalLength) {
+        var lineLength = $('#' + canvasID).parent("div").width();
+        $('#' + canvasID).attr('width',lineLength);
+        var context = document.getElementById(canvasID).getContext("2d");
+        context.beginPath();
+        //context.lineCap = "round";
+        context.moveTo(offset, 10);
+        context.lineTo(lineLength, 10);
+        context.lineWidth=2;
+        for(var i = offset; i < lineLength; i+=intervalLength) {
+            context.moveTo(i+context.lineWidth/2,10);     // why +lineWidth/2? because we will draw only lineWidth/2 for the first line.
+            context.lineTo(i+context.lineWidth/2,5);
+        }
+        for(var i = offset; i < lineLength; i+=intervalLength*5) {
+            context.moveTo(i+context.lineWidth/2,5);
+            context.lineTo(i+context.lineWidth/2,0);
+        }
+        context.strokeStyle = "#ff0000";
+        context.fillStyle = "#ffcc00";
+        context.fill();
+        context.stroke();
+        context.closePath();
+
+        context.fillStyle = "#000000";
+        context.font = "20px italic";
+        //var coordinate = Math.floor((lineLength-80)/(5*intervalLength)) * (5*intervalLength);
+        for(var i = 0; i < lineLength-80; i+=intervalLength*5) {        // 80px is 4*20px, 20px is font-size
+            context.fillText(i.toString(), i+offset-10, 30);
+        }
     }
-    context.strokeStyle = "#ff0000";
-    context.fillStyle = "#ffcc00";
-    context.fill();
-    context.stroke();
-    context.closePath();
+    $scope.offset = 10;
+    drawXAxis("xAxis", $scope.offset, 20);
 }]);

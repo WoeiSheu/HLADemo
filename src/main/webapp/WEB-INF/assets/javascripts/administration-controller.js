@@ -5,7 +5,6 @@
 angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', function($http, $scope, $interval) {
     var ctrl = this;
     $scope.request = {"crcAddress":"localhost", "federationName": "Gaea", "federateName": "", "fomUrl": "http://localhost:8080/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
-    console.log(JSON.stringify($scope.request));
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
