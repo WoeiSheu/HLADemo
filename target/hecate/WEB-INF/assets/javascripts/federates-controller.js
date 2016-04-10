@@ -7,12 +7,17 @@ angular.module('HLADemo').controller('FederatesController', ['$http', '$scope', 
 
     //$interval(fn, delay, [count], [invokeApply], [Pass]);
     //https://code.angularjs.org/1.5.0/docs/api/ng/service/$interval
-    $interval(function () {
+    var intervalPromise = $interval(function () {
         $http({method: 'GET', url: '/federates'}).success(function(data) {
             //console.log(data);
-            $scope.federatesWithTime = data;
+            $scope.federatesWithAttributes = data;
         });
     }, 1000);
+    $scope.$on('$destroy',function() {
+        if(intervalPromise) {
+            $interval.cancel(intervalPromise);
+        }
+    });
 
     /**********************
      * Created by Hypocrisy.
@@ -21,6 +26,7 @@ angular.module('HLADemo').controller('FederatesController', ['$http', '$scope', 
     var drawXAxis = function(canvasID,offset, intervalLength) {
         var lineLength = $('#' + canvasID).parent("div").width();
         $('#' + canvasID).attr('width',lineLength);
+        $('#' + canvasID).attr('height',36);
         var context = document.getElementById(canvasID).getContext("2d");
         context.beginPath();
         //context.lineCap = "round";

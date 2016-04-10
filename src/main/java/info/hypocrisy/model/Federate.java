@@ -408,7 +408,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     //parameters.put(_parameterIdSender, nameEncoder.toByteArray());
                     timeToMoveTo = timeToMoveTo.add(advancedStep);
                     _rtiAmbassador.nextMessageRequest(timeToMoveTo);
-                    _rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo);
+                    _rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo.add(advancedStep));
                 } catch (RTIexception e) {
                     e.printStackTrace();
                 }

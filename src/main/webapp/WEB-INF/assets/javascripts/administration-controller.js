@@ -2,9 +2,9 @@
  * Created by Hypocrisy on 3/24/2016.
  * This controller manage the federates.
  */
-angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', function($http, $scope, $interval) {
+angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', 'passDataService', function($http, $scope, $interval, passDataService) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"localhost", "federationName": "Gaea", "federateName": "", "fomUrl": "http://localhost:8080/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "fomUrl": "http://localhost:8080/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
@@ -62,7 +62,6 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.delete = function(federate) {
         $http({method: "DELETE", url: "/federates/" + federate.federation + "/" + federate.name }).success(function(data) {
             console.log(data);
-            //ctrl.updateFederates();
             $scope.federates = $scope.federates.filter(function(item) {
                 return !(item.federation == federate.federation && item.name == federate.name);
             });
@@ -75,7 +74,6 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     };
 
     $scope.upload = function (files) {
-        //$scope.request.fomFile = files[0];
         var fd = new FormData();
         fd.append("file", files[0]);
         var url;
@@ -120,7 +118,10 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     };
     this.initFederates();
 
-    $interval(function () {
+    /**********************
+     * update time periodically
+     **********************/
+    var intervalPromise = $interval(function () {
         $scope.federates.forEach(function(item,i,s){
             $http({method: "GET", url: "/federates/time/" + item.federation + "/" + item.name}).success(function (data) {
                 item.time = data.toFixed(2);
@@ -128,6 +129,19 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
             });
         });
     }, 1000);
+    $scope.$on('$destroy',function() {      // When leave this tab page, cancel the $interval
+        //passDataService.saveData($scope.federates);     // may be useful later.
+        if(intervalPromise) {
+            $interval.cancel(intervalPromise);
+        }
+    });
+    /**********************
+     * Or we can use following code.
+     **********************/
+    //var deleteInterval = $rootSscope.$on('$locationChangeSuccess', function() {
+    //    $interval.cancel($scope.stop);
+    //    deleteInterval();
+    //});
 }])
 .directive('createFederate', ['$http', '$timeout', '$location', function() {
     return {
