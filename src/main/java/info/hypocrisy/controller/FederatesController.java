@@ -83,7 +83,7 @@ public class FederatesController {
         return gson.toJson(federatesAttributesMap);
     }
 
-    @RequestMapping(value = "/federates/time/{federationName}/{federateName}")
+    @RequestMapping(value = "/federates/time/{federationName}/{federateName}", method = RequestMethod.GET)
     @ResponseBody
     public String getTime(@PathVariable String federationName,@PathVariable String federateName) {
         Federate federate = mapFederation.get(federationName).get(federateName);

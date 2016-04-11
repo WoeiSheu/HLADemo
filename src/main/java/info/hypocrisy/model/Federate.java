@@ -8,6 +8,7 @@ import hla.rti1516e.encoding.DecoderException;
 import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
+import hla.time1516.LogicalTimeLong;
 import se.pitch.prti1516e.time.HLAfloat64IntervalImpl;
 import se.pitch.prti1516e.time.HLAfloat64TimeImpl;
 
@@ -18,8 +19,11 @@ import java.net.URL;
  * This class implements a NullFederateAmbassador.
  */
 public class Federate extends NullFederateAmbassador implements Runnable{
-    private boolean state = true;
-    private boolean status = false;
+    private boolean state = true;                       // if false, a thread should be destroyed.
+    private boolean status = false;                     // if false, a thread should pause, or we can say it doing nothing.
+    private boolean isRegulating = false;               // flag to mark if this federate is Regulating
+    private boolean isConstrained = false;              // flag to mark if this federate is Constrained
+
     private RTIambassador _rtiAmbassador;
     private InteractionClassHandle _messageId;
     private ParameterHandle _parameterIdText;
@@ -183,52 +187,40 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         //_rtiAmbassador->enableAsynchronousDelivery();
         try {
             if ("Regulating".equals(federateAttributes.getStrategy())) {
-                try {
+                if(isRegulating) {
+                    _rtiAmbassador.modifyLookahead(lookahead);
+                } else {
                     _rtiAmbassador.enableTimeRegulation(lookahead);
-                } catch (Exception e) {
-                    _rtiAmbassador.disableTimeRegulation();
-                    _rtiAmbassador.enableTimeRegulation(lookahead);
-                    System.out.println("Time regulating already enabled");
                 }
-                try {
+                if(isConstrained) {
                     _rtiAmbassador.disableTimeConstrained();
-                } catch (Exception e) {
-                    System.out.println("Time constrained has't been enabled");
+                    isConstrained = false;
                 }
             } else if ("Constrained".equals(federateAttributes.getStrategy())) {
-                try {
+                if(!isConstrained) {
                     _rtiAmbassador.enableTimeConstrained();
-                } catch (Exception e) {
-                    System.out.println("Time constrained already enabled");
                 }
-                try {
+                if(isRegulating) {
                     _rtiAmbassador.disableTimeRegulation();
-                } catch (Exception e) {
-                    System.out.println("Time regulating has't been enabled");
+                    isRegulating = false;
                 }
             } else if ("Regulating and Constrained".equals(federateAttributes.getStrategy())) {
-                try {
+                if(isRegulating) {
+                    _rtiAmbassador.modifyLookahead(lookahead);
+                } else {
                     _rtiAmbassador.enableTimeRegulation(lookahead);
-                } catch (Exception e) {
-                    _rtiAmbassador.disableTimeRegulation();
-                    _rtiAmbassador.enableTimeRegulation(lookahead);
-                    System.out.println("Time regulating already enabled");
                 }
-                try {
+                if(!isConstrained) {
                     _rtiAmbassador.enableTimeConstrained();
-                } catch (Exception e) {
-                    System.out.println("Time Constrained already enabled");
                 }
             } else {
-                try {
+                if(isRegulating) {
                     _rtiAmbassador.disableTimeRegulation();
-                } catch (Exception e) {
-                    System.out.println("Time regulating has't been enabled");
+                    isRegulating = false;
                 }
-                try {
+                if(isConstrained) {
                     _rtiAmbassador.disableTimeConstrained();
-                } catch (Exception e) {
-                    System.out.println("Time constrained has't been enabled");
+                    isConstrained = false;
                 }
             }
         } catch (Exception e) {
@@ -264,11 +256,27 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             _rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
 
             /**********************
+             * Register Synchronization Point
+             **********************/
+            _rtiAmbassador.enableAsynchronousDelivery();
+            String SYNC_POINT = "ReadyToRun";
+            byte[] tag = {};
+            try {
+                _rtiAmbassador.registerFederationSynchronizationPoint(SYNC_POINT, tag);
+            } catch (Exception e) {
+
+            }
+            try {
+                _rtiAmbassador.synchronizationPointAchieved(SYNC_POINT);
+            } catch (RTIexception e) {
+
+            }
+            /**********************
              * Reserve object instance name and register object instance
              **********************/
             do {
-                Calendar cal = Calendar.getInstance();
-                _username = "hecate" + cal.get(Calendar.SECOND);
+                Date date = new Date();
+                _username = "f" + new Long(date.getTime()).toString();
 
                 try {
                     _reservationComplete = false;
@@ -396,7 +404,9 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             } catch (RTIexception e) {
 
             }
-            while(true) {
+
+            int i = 1;
+            while((i--)>0) {
                 try {
                     //HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
                     String message = "Hello";
@@ -535,6 +545,17 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     }
 
     @Override
+    public void timeRegulationEnabled(LogicalTime logicalTime) {
+        isRegulating = true;
+    }
+
+    @Override
+    public void timeConstrainedEnabled(LogicalTime logicalTime) {
+        isConstrained = true;
+    }
+
+    @Override
     public void timeAdvanceGrant(LogicalTime logicalTime) {
+        System.out.println("Time Advance Successfully");
     }
 }

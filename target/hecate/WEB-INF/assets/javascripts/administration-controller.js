@@ -4,7 +4,9 @@
  */
 angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', 'passDataService', function($http, $scope, $interval, passDataService) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "fomUrl": "http://localhost:8080/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+
+    var host = window.location.protocol + "//" + window.location.host;
+    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {

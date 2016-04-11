@@ -37,7 +37,7 @@
         <ul class="nav navbar-nav">
           <li class="active"><a href="#">Home</a></li>
           <li id="rti"><a href="#/rti">RTI</a></li>
-          <li id="federate"><a href="#/federates">Federates</a></li>
+          <li id="federates"><a href="#/federates">Federates</a></li>
           <li id="administration"><a href="#/administration">Admin</a></li>
         </ul>
       </div>
