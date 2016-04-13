@@ -6,7 +6,27 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     var ctrl = this;
 
     var host = window.location.protocol + "//" + window.location.host;
-    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.availableMechanisms = ["Time Stepped", "Event Driven"];
+    $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
+
+    $scope.joinHardware = function() {
+        $http({method: "PUT", url: "/federates/hardware"}).success(function (data) {
+            var federate = {
+                "name": "Raspberry",
+                "federation": $scope.request.federationName,
+                "mechanism": "Time Stepped",
+                "fomUrl": $scope.request.fomUrl,
+                "fom": $scope.request.fomUrl.split('/').pop(),
+                "strategy": "Regulating",
+                "time": "0.00",
+                "step": "1",
+                "lookahead": "1",
+                "startOrPause": "Start"
+            };
+            $scope.federates.push(federate);
+        });
+    };
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
@@ -16,6 +36,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
             var federate = {
                 "name": $scope.request.federateName,
                 "federation": $scope.request.federationName,
+                "mechanism": $scope.request.mechanism,
                 "fomUrl": $scope.request.fomUrl,
                 "fom": $scope.request.fomUrl.split('/').pop(),
                 "strategy": $scope.request.strategy,
@@ -87,11 +108,9 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
         $http({method: "POST", url: url, headers: {'Content-Type': undefined}, transformRequest: angular.identity, data: fd}).success(function (data) {
             //console.log(data);
-            $scope.request.fomUrl = data.url;
+            $scope.request.fomUrl = host + '/assets/config/' + data;
         });
     };
-
-    $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
     /**********************
      * Init or reset federates.
@@ -105,6 +124,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                     var item = {
                         "name": federate,
                         "federation": federation,
+                        "mechanism": federates[federate].mechanism,
                         "fomUrl": federates[federate].fomUrl,
                         "fom": federates[federate].fomName,
                         "strategy": federates[federate].strategy,

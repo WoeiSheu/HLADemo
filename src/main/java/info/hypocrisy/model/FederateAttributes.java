@@ -8,6 +8,7 @@ public class FederateAttributes {
     private String name;
     private String federation;
     private String crcAddress;
+    private int mechanism;          // 0: Time Stepped, 1: Event Driven
     private String fomName;
     private String fomUrl;
     private String strategy;
@@ -24,6 +25,9 @@ public class FederateAttributes {
     }
     public String getCrcAddress() {
         return crcAddress;
+    }
+    public int getMechanism() {
+        return mechanism;
     }
     public String getFomName() {
         return fomName;
@@ -55,6 +59,9 @@ public class FederateAttributes {
     }
     public void setCrcAddress(String crcAddress) {
         this.crcAddress = crcAddress;
+    }
+    public void setMechanism(int mechanism) {
+        this.mechanism = mechanism;
     }
     public void setFomName(String fomName) {
         this.fomName = fomName;

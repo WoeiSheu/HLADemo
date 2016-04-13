@@ -19,26 +19,30 @@ import java.net.URL;
  * This class implements a NullFederateAmbassador.
  */
 public class Federate extends NullFederateAmbassador implements Runnable{
-    private boolean state = true;                       // if false, a thread should be destroyed.
-    private boolean status = false;                     // if false, a thread should pause, or we can say it doing nothing.
+    private volatile boolean state = true;                       // if false, a thread should be destroyed.
+    private volatile boolean status = false;                     // if false, a thread should pause, or we can say it doing nothing.
     private boolean isRegulating = false;               // flag to mark if this federate is Regulating
     private boolean isConstrained = false;              // flag to mark if this federate is Constrained
 
-    private RTIambassador _rtiAmbassador;
-    private InteractionClassHandle _messageId;
-    private ParameterHandle _parameterIdText;
-    private ParameterHandle _parameterIdSender;
-    private ObjectInstanceHandle _userId;
-    private AttributeHandle _attributeIdName;
-    private String _username;
+    private RTIambassador rtiAmbassador;
+    private InteractionClassHandle messageId;
+    private ParameterHandle paramterIdText;
+    private ParameterHandle parameterIdSender;
+    private ObjectInstanceHandle userId;
+    private AttributeHandle attributeIdName;
+    private String username;
 
-    private volatile boolean _reservationComplete;
-    private volatile boolean _reservationSucceeded;
-    private final Object _reservationSemaphore = new Object();
+    private volatile boolean reservationComplete;
+    private volatile boolean reservationSucceeded;
+    private final Object reservationSemaphore = new Object();
 
-    private EncoderFactory _encoderFactory;
+    private final String SYNC_POINT = "ReadyToRun";
+    private volatile boolean isRegisterSyncPointSucceeded = false;
+    private volatile boolean isSynchronized = false;
 
-    private final Map<ObjectInstanceHandle, Participant> _knownObjects = new HashMap<ObjectInstanceHandle, Participant>();
+    private EncoderFactory encoderFactory;
+
+    private final Map<ObjectInstanceHandle, Participant> knownObjects = new HashMap<ObjectInstanceHandle, Participant>();
 
     private static class Participant {
         private final String name;
@@ -61,6 +65,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setName("TestFederate");
         federateAttributes.setFederation("TestFederation");
         federateAttributes.setCrcAddress("localhost");
+        federateAttributes.setMechanism(1);
         federateAttributes.setFomName("HLADemo");
         federateAttributes.setFomUrl("http://localhost:8080/assets/config/HLADemo.xml");
         federateAttributes.setStrategy("Regulating and Constrained");
@@ -78,6 +83,15 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setCrcAddress(federateParameters.getCrcAddress());
         String[] tmp = federateParameters.getFomUrl().split("/");
         federateAttributes.setFomName(tmp[tmp.length - 1]);
+
+        if( "Time Stepped".equals(federateParameters.getMechanism()) ) {
+            federateAttributes.setMechanism(0);
+        } else if( "Event Driven".equals(federateParameters.getMechanism()) ) {
+            federateAttributes.setMechanism(1);
+        } else {
+            federateAttributes.setMechanism(2);
+        }
+
         federateAttributes.setFomUrl(federateParameters.getFomUrl());
         federateAttributes.setStrategy(federateParameters.getStrategy());
         //federateAttributes.setTime(this.getTimeToMoveTo());
@@ -86,14 +100,8 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setLookahead(federateParameters.getLookahead());
     }
 
-    public boolean getState() {
-        return state;
-    }
     public void setState(boolean state) {
         this.state = state;
-    }
-    public boolean getStatus() {
-        return status;
     }
     public void setStatus(boolean status) {
         this.status = status;
@@ -118,8 +126,8 @@ public class Federate extends NullFederateAmbassador implements Runnable{
              **********************/
             try {
                 RtiFactory rtiFactory = RtiFactoryFactory.getRtiFactory();
-                _rtiAmbassador = rtiFactory.getRtiAmbassador();
-                _encoderFactory = rtiFactory.getEncoderFactory();
+                rtiAmbassador = rtiFactory.getRtiAmbassador();
+                encoderFactory = rtiFactory.getEncoderFactory();
             } catch (Exception e) {
                 System.out.println("Unable to create RTI ambassador.");
                 return;
@@ -127,13 +135,13 @@ public class Federate extends NullFederateAmbassador implements Runnable{
 
             String crcAddress = federateAttributes.getCrcAddress();
             String settingsDesignator = "crcAddress=" + crcAddress;
-            _rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
+            rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
 
             /**********************
              * Clean up old federation
              **********************/
             try {
-                _rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
+                rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
             } catch (FederatesCurrentlyJoined ignored) {
             } catch (FederationExecutionDoesNotExist ignored) {
             }
@@ -144,37 +152,110 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             //String s = "http://localhost:8080/assets/config/HLADemo.xml";
             URL url = new URL(federateAttributes.getFomUrl());
             try {
-                _rtiAmbassador.createFederationExecution(federateAttributes.getFederation(), new URL[]{url}, "HLAfloat64Time");
+                rtiAmbassador.createFederationExecution(federateAttributes.getFederation(), new URL[]{url}, "HLAfloat64Time");
             } catch (FederationExecutionAlreadyExists ignored) {
             }
 
             /**********************
-             * Join current federate(specified with this) into current federation(specified with _rtiAmbassador)
+             * Join current federate(specified with this) into current federation(specified with rtiAmbassador)
              **********************/
-            _rtiAmbassador.joinFederationExecution(federateAttributes.getName(), federateAttributes.getFederation(), new URL[]{url});
+            rtiAmbassador.joinFederationExecution(federateAttributes.getName(), federateAttributes.getFederation(), new URL[]{url});
 
             /**********************
              * Add by Hypocrisy on 03/28/2015
              * Time Management Variables.
              **********************/
             HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getLookahead()) );
-            //_rtiAmbassador->enableAsynchronousDelivery();
+            //rtiAmbassador->enableAsynchronousDelivery();
             if ("Regulating".equals(federateAttributes.getStrategy())) {
-                _rtiAmbassador.enableTimeRegulation(lookahead);
+                rtiAmbassador.enableTimeRegulation(lookahead);
             } else if ("Constrained".equals(federateAttributes.getStrategy())) {
-                _rtiAmbassador.enableTimeConstrained();
+                rtiAmbassador.enableTimeConstrained();
             } else if("Regulating and Constrained".equals(federateAttributes.getStrategy())){
-                _rtiAmbassador.enableTimeRegulation(lookahead);
-                _rtiAmbassador.enableTimeConstrained();
+                rtiAmbassador.enableTimeRegulation(lookahead);
+                rtiAmbassador.enableTimeConstrained();
             } else {
-                //_rtiAmbassador.disableTimeRegulation();   // If it is not enabled, this method will throw exception.
-                //_rtiAmbassador.disableTimeConstrained();
+                //rtiAmbassador.disableTimeRegulation();   // If it is not enabled, this method will throw exception.
+                //rtiAmbassador.disableTimeConstrained();
             }
             timeToMoveTo = new HLAfloat64TimeImpl(0);
             advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getStep()) );
-            _rtiAmbassador.enableCallbacks();
+            rtiAmbassador.enableCallbacks();
         } catch (Exception e) {
             System.out.println("Unable to join");
+        }
+        try {
+            /**********************
+             * Subscribe and publish interactions
+             **********************/
+            messageId = rtiAmbassador.getInteractionClassHandle("Communication");
+            paramterIdText = rtiAmbassador.getParameterHandle(messageId, "Message");
+            parameterIdSender = rtiAmbassador.getParameterHandle(messageId, "Sender");
+
+            rtiAmbassador.subscribeInteractionClass(messageId);
+            rtiAmbassador.publishInteractionClass(messageId);
+
+            /**********************
+             * Subscribe and publish objects
+             **********************/
+            ObjectClassHandle participantId = rtiAmbassador.getObjectClassHandle("Participant");
+            attributeIdName = rtiAmbassador.getAttributeHandle(participantId, "Name");
+
+            AttributeHandleSet attributeSet = rtiAmbassador.getAttributeHandleSetFactory().create();
+            attributeSet.add(attributeIdName);
+
+            rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
+            rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
+
+            /**********************
+             * Reserve object instance name and register object instance
+             **********************/
+            do {
+                Date date = new Date();
+                username = "f" + new Long(date.getTime()).toString();
+
+                try {
+                    reservationComplete = false;
+                    rtiAmbassador.reserveObjectInstanceName(username);
+                    synchronized (reservationSemaphore) {
+                        // Wait for response from RTI
+                        while (!reservationComplete) {
+                            try {
+                                reservationSemaphore.wait();
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
+                    }
+                    if (!reservationSucceeded) {
+                        System.out.println("Name already taken, try again.");
+                        return;
+                    }
+                } catch (IllegalName e) {
+                    //System.out.println("Illegal name. Try again.");
+                } catch (RTIexception e) {
+                    //System.out.println("RTI exception when reserving name: " + e.getMessage());
+                    return;
+                }
+            } while (!reservationSucceeded);
+            userId = rtiAmbassador.registerObjectInstance(participantId, username);
+
+            /**********************
+             * Register Synchronization Point
+             **********************/
+            //rtiAmbassador.enableAsynchronousDelivery();
+            byte[] tag = {};
+            try {
+                rtiAmbassador.registerFederationSynchronizationPoint(SYNC_POINT, tag);
+            } catch (Exception e) {
+
+            }
+            try {
+                rtiAmbassador.synchronizationPointAchieved(SYNC_POINT);
+            } catch (RTIexception e) {
+
+            }
+        } catch (RTIexception ignored) {
+
         }
     }
 
@@ -184,42 +265,42 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setLookahead(updateParameters.getLookahead());
 
         HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getLookahead()) );
-        //_rtiAmbassador->enableAsynchronousDelivery();
+        //rtiAmbassador->enableAsynchronousDelivery();
         try {
             if ("Regulating".equals(federateAttributes.getStrategy())) {
                 if(isRegulating) {
-                    _rtiAmbassador.modifyLookahead(lookahead);
+                    rtiAmbassador.modifyLookahead(lookahead);
                 } else {
-                    _rtiAmbassador.enableTimeRegulation(lookahead);
+                    rtiAmbassador.enableTimeRegulation(lookahead);
                 }
                 if(isConstrained) {
-                    _rtiAmbassador.disableTimeConstrained();
+                    rtiAmbassador.disableTimeConstrained();
                     isConstrained = false;
                 }
             } else if ("Constrained".equals(federateAttributes.getStrategy())) {
                 if(!isConstrained) {
-                    _rtiAmbassador.enableTimeConstrained();
+                    rtiAmbassador.enableTimeConstrained();
                 }
                 if(isRegulating) {
-                    _rtiAmbassador.disableTimeRegulation();
+                    rtiAmbassador.disableTimeRegulation();
                     isRegulating = false;
                 }
             } else if ("Regulating and Constrained".equals(federateAttributes.getStrategy())) {
                 if(isRegulating) {
-                    _rtiAmbassador.modifyLookahead(lookahead);
+                    rtiAmbassador.modifyLookahead(lookahead);
                 } else {
-                    _rtiAmbassador.enableTimeRegulation(lookahead);
+                    rtiAmbassador.enableTimeRegulation(lookahead);
                 }
                 if(!isConstrained) {
-                    _rtiAmbassador.enableTimeConstrained();
+                    rtiAmbassador.enableTimeConstrained();
                 }
             } else {
                 if(isRegulating) {
-                    _rtiAmbassador.disableTimeRegulation();
+                    rtiAmbassador.disableTimeRegulation();
                     isRegulating = false;
                 }
                 if(isConstrained) {
-                    _rtiAmbassador.disableTimeConstrained();
+                    rtiAmbassador.disableTimeConstrained();
                     isConstrained = false;
                 }
             }
@@ -233,210 +314,94 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     @Override
     public void run() {
         try {
-            /**********************
-             * Subscribe and publish interactions
-             **********************/
-            _messageId = _rtiAmbassador.getInteractionClassHandle("Communication");
-            _parameterIdText = _rtiAmbassador.getParameterHandle(_messageId, "Message");
-            _parameterIdSender = _rtiAmbassador.getParameterHandle(_messageId, "Sender");
-
-            _rtiAmbassador.subscribeInteractionClass(_messageId);
-            _rtiAmbassador.publishInteractionClass(_messageId);
-
-            /**********************
-             * Subscribe and publish objects
-             **********************/
-            ObjectClassHandle participantId = _rtiAmbassador.getObjectClassHandle("Participant");
-            _attributeIdName = _rtiAmbassador.getAttributeHandle(participantId, "Name");
-
-            AttributeHandleSet attributeSet = _rtiAmbassador.getAttributeHandleSetFactory().create();
-            attributeSet.add(_attributeIdName);
-
-            _rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
-            _rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
-
-            /**********************
-             * Register Synchronization Point
-             **********************/
-            _rtiAmbassador.enableAsynchronousDelivery();
-            String SYNC_POINT = "ReadyToRun";
-            byte[] tag = {};
-            try {
-                _rtiAmbassador.registerFederationSynchronizationPoint(SYNC_POINT, tag);
-            } catch (Exception e) {
-
-            }
-            try {
-                _rtiAmbassador.synchronizationPointAchieved(SYNC_POINT);
-            } catch (RTIexception e) {
-
-            }
-            /**********************
-             * Reserve object instance name and register object instance
-             **********************/
-            do {
-                Date date = new Date();
-                _username = "f" + new Long(date.getTime()).toString();
-
-                try {
-                    _reservationComplete = false;
-                    _rtiAmbassador.reserveObjectInstanceName(_username);
-                    synchronized (_reservationSemaphore) {
-                        // Wait for response from RTI
-                        while (!_reservationComplete) {
-                            try {
-                                _reservationSemaphore.wait();
-                            } catch (InterruptedException ignored) {
-                            }
-                        }
-                    }
-                    if (!_reservationSucceeded) {
-                        System.out.println("Name already taken, try again.");
-                        return;
-                    }
-                } catch (IllegalName e) {
-                    //System.out.println("Illegal name. Try again.");
-                } catch (RTIexception e) {
-                    //System.out.println("RTI exception when reserving name: " + e.getMessage());
-                    return;
-                }
-            } while (!_reservationSucceeded);
-
-            _userId = _rtiAmbassador.registerObjectInstance(participantId, _username);
-
             while(state) {
                 Thread.sleep(1000);
-                if(status) {
-                    try {
-                        timeToMoveTo = timeToMoveTo.add(advancedStep);
-                        _rtiAmbassador.timeAdvanceRequest(timeToMoveTo);
-                    } catch (Exception e) {
-                        timeToMoveTo = timeToMoveTo.subtract(advancedStep);
-                    }
-
-                    HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
+                if(status && federateAttributes.getMechanism() == 0) {
+                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
 
                     String message = "Hello";
 
-                    ParameterHandleValueMap parameters = _rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = _encoderFactory.createHLAunicodeString();
+                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
                     messageEncoder.setValue(message);
-                    parameters.put(_parameterIdText, messageEncoder.toByteArray());
-                    parameters.put(_parameterIdSender, nameEncoder.toByteArray());
-                    _rtiAmbassador.sendInteraction(_messageId, parameters, null);
-                    //_rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo);
+                    parameters.put(paramterIdText, messageEncoder.toByteArray());
+                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
+                    rtiAmbassador.sendInteraction(messageId, parameters, null);
+                    //rtiAmbassador.sendInteraction(messageId, parameters, null, timeToMoveTo.add(advancedStep));
+
+                    try {
+                        rtiAmbassador.timeAdvanceRequest(timeToMoveTo.add(advancedStep));
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                if(status && federateAttributes.getMechanism() == 1) {
+                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
+
+                    String message = "Hello";
+
+                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
+                    messageEncoder.setValue(message);
+                    parameters.put(paramterIdText, messageEncoder.toByteArray());
+                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
+
+                    HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
+                    HLAfloat64Time timestamp = timeToMoveTo.add(lookahead);
+                    rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
+
+                    try {
+                        rtiAmbassador.nextMessageRequest(timeToMoveTo.add(advancedStep));
+                    } catch (Exception e) {
+                    }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ignored) {
         }
     }
 
     public void test() {
         try {
-            /**********************
-             * Subscribe and publish interactions
-             **********************/
-            _messageId = _rtiAmbassador.getInteractionClassHandle("Communication");
-            _parameterIdText = _rtiAmbassador.getParameterHandle(_messageId, "Message");
-            _parameterIdSender = _rtiAmbassador.getParameterHandle(_messageId, "Sender");
-
-            _rtiAmbassador.subscribeInteractionClass(_messageId);
-            _rtiAmbassador.publishInteractionClass(_messageId);
-
-            /**********************
-             * Subscribe and publish objects
-             **********************/
-            ObjectClassHandle participantId = _rtiAmbassador.getObjectClassHandle("Participant");
-            _attributeIdName = _rtiAmbassador.getAttributeHandle(participantId, "Name");
-
-            AttributeHandleSet attributeSet = _rtiAmbassador.getAttributeHandleSetFactory().create();
-            attributeSet.add(_attributeIdName);
-
-            _rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
-            _rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
-
-            /**********************
-             * Reserve object instance name and register object instance
-             **********************/
-            /*
-            do {
-                Calendar cal = Calendar.getInstance();
-                _username = "hecate" + cal.get(Calendar.SECOND);
-
-                try {
-                    _reservationComplete = false;
-                    _rtiAmbassador.reserveObjectInstanceName(_username);
-                    synchronized (_reservationSemaphore) {
-                        // Wait for response from RTI
-                        while (!_reservationComplete) {
-                            try {
-                                _reservationSemaphore.wait();
-                            } catch (InterruptedException ignored) {
-                            }
-                        }
-                    }
-                    if (!_reservationSucceeded) {
-                        System.out.println("Name already taken, try again.");
-                        return;
-                    }
-                } catch (IllegalName e) {
-                    //System.out.println("Illegal name. Try again.");
-                } catch (RTIexception e) {
-                    //System.out.println("RTI exception when reserving name: " + e.getMessage());
-                    return;
-                }
-            } while (!_reservationSucceeded);
-
-            _userId = _rtiAmbassador.registerObjectInstance(participantId, _username);
-            */
-
-            _rtiAmbassador.enableAsynchronousDelivery();
-            String SYNC_POINT = "ReadyToRun";
-            byte[] tag = {};
-            try {
-                _rtiAmbassador.registerFederationSynchronizationPoint(SYNC_POINT, tag);
-            } catch (Exception e) {
-
-            }
-            try {
-                _rtiAmbassador.synchronizationPointAchieved(SYNC_POINT);
-            } catch (RTIexception e) {
-
-            }
-
             int i = 1;
             while((i--)>0) {
                 try {
-                    //HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
+                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
+
                     String message = "Hello";
 
-                    ParameterHandleValueMap parameters = _rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = _encoderFactory.createHLAunicodeString();
+                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
                     messageEncoder.setValue(message);
-                    parameters.put(_parameterIdText, messageEncoder.toByteArray());
-                    //parameters.put(_parameterIdSender, nameEncoder.toByteArray());
-                    timeToMoveTo = timeToMoveTo.add(advancedStep);
-                    _rtiAmbassador.nextMessageRequest(timeToMoveTo);
-                    _rtiAmbassador.sendInteraction(_messageId, parameters, null, timeToMoveTo.add(advancedStep));
+                    parameters.put(paramterIdText, messageEncoder.toByteArray());
+                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
+
+                    Double epsilon = 0.00001;
+                    HLAfloat64Interval ts = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead())+0.5);
+                    HLAfloat64Time timestamp = timeToMoveTo.add(ts);
+                    rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
+
+                    try {
+                        rtiAmbassador.nextMessageRequest(timeToMoveTo.add(advancedStep));
+                    } catch (Exception e) {
+                    }
                 } catch (RTIexception e) {
                     e.printStackTrace();
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
 
         }
     }
 
     public void destroy() {
         try {
-            _rtiAmbassador.resignFederationExecution(ResignAction.DELETE_OBJECTS_THEN_DIVEST);
+            rtiAmbassador.resignFederationExecution(ResignAction.DELETE_OBJECTS_THEN_DIVEST);
             try {
-                _rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
+                rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
             } catch (FederatesCurrentlyJoined ignored) {
             }
-            _rtiAmbassador.disconnect();
-            _rtiAmbassador = null;
+            rtiAmbassador.disconnect();
+            rtiAmbassador = null;
             //timer.cancel();
         } catch (Exception e) {
             e.printStackTrace();
@@ -451,20 +416,20 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                                    TransportationTypeHandle theTransport,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        if (interactionClass.equals(_messageId)) {
-            if (!theParameters.containsKey(_parameterIdText)) {
+        if (interactionClass.equals(messageId)) {
+            if (!theParameters.containsKey(paramterIdText)) {
                 System.out.println("Bad message received: No text.");
                 return;
             }
-            if (!theParameters.containsKey(_parameterIdSender)) {
+            if (!theParameters.containsKey(parameterIdSender)) {
                 System.out.println("Bad message received: No sender.");
                 return;
             }
             try {
-                HLAunicodeString messageDecoder = _encoderFactory.createHLAunicodeString();
-                HLAunicodeString senderDecoder = _encoderFactory.createHLAunicodeString();
-                messageDecoder.decode(theParameters.get(_parameterIdText));
-                senderDecoder.decode(theParameters.get(_parameterIdSender));
+                HLAunicodeString messageDecoder = encoderFactory.createHLAunicodeString();
+                HLAunicodeString senderDecoder = encoderFactory.createHLAunicodeString();
+                messageDecoder.decode(theParameters.get(paramterIdText));
+                senderDecoder.decode(theParameters.get(parameterIdSender));
                 String message = messageDecoder.getValue();
                 String sender = senderDecoder.getValue();
 
@@ -477,20 +442,47 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     }
 
     @Override
+    public void receiveInteraction(InteractionClassHandle interactionClass,
+                                   ParameterHandleValueMap theParameters,
+                                   byte[] userSuppliedTag,
+                                   OrderType sentOrdering,
+                                   TransportationTypeHandle theTransport,
+                                   LogicalTime theTime,
+                                   OrderType receivedOrdering,
+                                   SupplementalReceiveInfo receiveInfo)
+            throws FederateInternalError {
+        System.out.println("Receive message with timestamp: " + theTime.toString());
+    }
+
+    @Override
+    public void receiveInteraction(InteractionClassHandle interactionClass,
+                                   ParameterHandleValueMap theParameters,
+                                   byte[] userSuppliedTag,
+                                   OrderType sentOrdering,
+                                   TransportationTypeHandle theTransport,
+                                   LogicalTime theTime,
+                                   OrderType receivedOrdering,
+                                   MessageRetractionHandle retractionHandle,
+                                   SupplementalReceiveInfo receiveInfo)
+            throws FederateInternalError {
+        System.out.println("Receive message with timestamp: " + theTime.toString());
+    }
+
+    @Override
     public final void objectInstanceNameReservationSucceeded(String objectName) {
-        synchronized (_reservationSemaphore) {
-            _reservationComplete = true;
-            _reservationSucceeded = true;
-            _reservationSemaphore.notifyAll();
+        synchronized (reservationSemaphore) {
+            reservationComplete = true;
+            reservationSucceeded = true;
+            reservationSemaphore.notifyAll();
         }
     }
 
     @Override
     public final void objectInstanceNameReservationFailed(String objectName) {
-        synchronized (_reservationSemaphore) {
-            _reservationComplete = true;
-            _reservationSucceeded = false;
-            _reservationSemaphore.notifyAll();
+        synchronized (reservationSemaphore) {
+            reservationComplete = true;
+            reservationSucceeded = false;
+            reservationSemaphore.notifyAll();
         }
     }
 
@@ -499,7 +491,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                                      byte[] userSuppliedTag,
                                      OrderType sentOrdering,
                                      SupplementalRemoveInfo removeInfo) {
-        Participant member = _knownObjects.remove(theObject);
+        Participant member = knownObjects.remove(theObject);
         if (member != null) {
             System.out.println("[" + member + " has left]");
         }
@@ -512,16 +504,16 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                                        OrderType sentOrdering,
                                        TransportationTypeHandle theTransport,
                                        SupplementalReflectInfo reflectInfo) {
-        if (!_knownObjects.containsKey(theObject)) {
-            if (theAttributes.containsKey(_attributeIdName)) {
+        if (!knownObjects.containsKey(theObject)) {
+            if (theAttributes.containsKey(attributeIdName)) {
                 try {
-                    final HLAunicodeString usernameDecoder = _encoderFactory.createHLAunicodeString();
-                    usernameDecoder.decode(theAttributes.get(_attributeIdName));
+                    final HLAunicodeString usernameDecoder = encoderFactory.createHLAunicodeString();
+                    usernameDecoder.decode(theAttributes.get(attributeIdName));
                     String memberName = usernameDecoder.getValue();
                     Participant member = new Participant(memberName);
                     System.out.println("[" + member + " has joined]");
                     System.out.print("> ");
-                    _knownObjects.put(theObject, member);
+                    knownObjects.put(theObject, member);
                 } catch (DecoderException e) {
                     System.out.println("Failed to decode incoming attribute");
                 }
@@ -533,29 +525,59 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     public final void provideAttributeValueUpdate(ObjectInstanceHandle theObject,
                                                   AttributeHandleSet theAttributes,
                                                   byte[] userSuppliedTag) {
-        if (theObject.equals(_userId) && theAttributes.contains(_attributeIdName)) {
+        if (theObject.equals(userId) && theAttributes.contains(attributeIdName)) {
             try {
-                AttributeHandleValueMap attributeValues = _rtiAmbassador.getAttributeHandleValueMapFactory().create(1);
-                HLAunicodeString nameEncoder = _encoderFactory.createHLAunicodeString(_username);
-                attributeValues.put(_attributeIdName, nameEncoder.toByteArray());
-                _rtiAmbassador.updateAttributeValues(_userId, attributeValues, null);
+                AttributeHandleValueMap attributeValues = rtiAmbassador.getAttributeHandleValueMapFactory().create(1);
+                HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
+                attributeValues.put(attributeIdName, nameEncoder.toByteArray());
+                rtiAmbassador.updateAttributeValues(userId, attributeValues, null);
             } catch (RTIexception ignored) {
             }
         }
     }
 
     @Override
-    public void timeRegulationEnabled(LogicalTime logicalTime) {
+    public void timeRegulationEnabled(LogicalTime logicalTime) throws FederateInternalError {
         isRegulating = true;
+        System.out.println("Current Logical Time: " + logicalTime.toString());
     }
 
     @Override
-    public void timeConstrainedEnabled(LogicalTime logicalTime) {
+    public void timeConstrainedEnabled(LogicalTime logicalTime) throws FederateInternalError {
         isConstrained = true;
+        System.out.println("Current Logical Time: " + logicalTime.toString());
     }
 
     @Override
-    public void timeAdvanceGrant(LogicalTime logicalTime) {
-        System.out.println("Time Advance Successfully");
+    public void synchronizationPointRegistrationSucceeded(String synchronizationPointLabel) throws FederateInternalError {
+        isRegisterSyncPointSucceeded = true;
+        System.out.println("Register Synchronized Point Successfully");
+    }
+
+    @Override
+    public void synchronizationPointRegistrationFailed(String synchronizationPointLabel, SynchronizationPointFailureReason reason)
+            throws FederateInternalError {
+        if(reason == SynchronizationPointFailureReason.SYNCHRONIZATION_POINT_LABEL_NOT_UNIQUE) {
+            isRegisterSyncPointSucceeded = true;
+            System.out.println("Have Registered Synchronized Point");
+        }
+    }
+
+    @Override
+    public void announceSynchronizationPoint(String synchronizationPointLabel, byte[] userSuppliedTag) throws FederateInternalError {
+        System.out.println("Announce Synchronized Point Successfully");
+    }
+
+
+    @Override
+    public void federationSynchronized(String synchronizationPointLabel, FederateHandleSet failedToSyncSet) throws FederateInternalError {
+        isSynchronized = true;
+        System.out.println("Achieve Synchronized Point Successfully");
+    }
+
+    @Override
+    public void timeAdvanceGrant(LogicalTime logicalTime) throws FederateInternalError {
+        timeToMoveTo = (HLAfloat64Time) logicalTime;
+        System.out.println("Time Advance to " + logicalTime.toString() + " Successfully");
     }
 }

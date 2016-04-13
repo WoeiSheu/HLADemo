@@ -9,6 +9,7 @@ public class FederateParameters{
     private String crcAddress;
     private String federationName;
     private String federateName;
+    private String mechanism;
     private String fomUrl;
     private String strategy;
     private String step;
@@ -25,6 +26,9 @@ public class FederateParameters{
     }
     public String getFederateName() {
         return federateName;
+    }
+    public String getMechanism() {
+        return mechanism;
     }
     public String getFomUrl() {
         return fomUrl;
@@ -50,6 +54,9 @@ public class FederateParameters{
     }
     public void setFederateName(String federateName) {
         this.federateName = federateName;
+    }
+    public void setMechanism(String mechanism) {
+        this.mechanism = mechanism;
     }
     public void setFomUrl(String fomUrl) {
         this.fomUrl = fomUrl;

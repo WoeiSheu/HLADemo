@@ -24,12 +24,12 @@ import java.util.*;
 @Controller
 //@RequestMapping("/federates")
 public class FederatesController {
+    boolean hardwareConnected = false;
     Map<String,Map<String,Federate>> mapFederation = new HashMap<String, Map<String, Federate>>();
     Gson gson = new GsonBuilder().serializeNulls().create();
 
     private class ResponseValue {
         private String status;
-        private String url;
 
         public ResponseValue() {
             this.status = "Success";
@@ -41,15 +41,9 @@ public class FederatesController {
         public String getStatus() {
             return status;
         }
-        public String getUrl() {
-            return url;
-        }
 
         public void setStatus(String status) {
             this.status = status;
-        }
-        public void setUrl(String url) {
-            this.url = url;
         }
     }
 
@@ -134,9 +128,24 @@ public class FederatesController {
             return "{\"status\":\"Failure\"}";
         }
 
-        ResponseValue responseValue = new ResponseValue("Success");
-        responseValue.setUrl("http://localhost:8080/assets/config/" + fileName);
-        return gson.toJson(responseValue);
+        return gson.toJson(fileName);
+    }
+
+    @RequestMapping(value = "/federates/hardware", method = RequestMethod.POST)
+    @ResponseBody
+    public String processHardware(@RequestBody FederateParameters federateParameters) {
+        if(hardwareConnected) {
+            //mapFederation
+            return "{\"status\":\"Success\"}";
+        } else {
+            return "{\"status\":\"Haven't joined\"}";
+        }
+    }
+
+    @RequestMapping(value = "/federates/hardware", method = RequestMethod.PUT)
+    @ResponseBody
+    public void joinHardware() {
+        hardwareConnected = true;
     }
 
     @RequestMapping(value = "/federates/update/{federationName}/{federateName}", method = RequestMethod.PUT)
