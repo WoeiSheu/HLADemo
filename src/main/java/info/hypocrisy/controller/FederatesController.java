@@ -226,7 +226,9 @@ public class FederatesController {
             }
         }
 
-        hardwareConnected = false;
+        if("Raspberry".equals(federateName)) {
+            hardwareConnected = false;
+        }
         ResponseValue responseValue = new ResponseValue("Failure");
         return gson.toJson(responseValue);
     }

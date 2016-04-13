@@ -189,9 +189,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 //rtiAmbassador.disableTimeRegulation();   // If it is not enabled, this method will throw exception.
                 //rtiAmbassador.disableTimeConstrained();
             }
-            // If there is constrained federates, and this federate is regulating, the start time of this federate is not 0.
-            currentTime = (HLAfloat64Time) rtiAmbassador.queryLogicalTime();
-            advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getStep()) );
             rtiAmbassador.enableCallbacks();
         } catch (Exception e) {
             System.out.println("Unable to join");
@@ -266,6 +263,10 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             } catch (RTIexception e) {
 
             }
+
+            // If there is constrained federates, and this federate is regulating, the start time of this federate is not 0.
+            currentTime = (HLAfloat64Time) rtiAmbassador.queryLogicalTime();
+            advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getStep()) );
         } catch (RTIexception ignored) {
 
         }
@@ -573,13 +574,13 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     @Override
     public void timeRegulationEnabled(LogicalTime logicalTime) throws FederateInternalError {
         isRegulating = true;
-        System.out.println("Current Logical Time: " + logicalTime.toString());
+        System.out.println("Federate is regulating.");
     }
 
     @Override
     public void timeConstrainedEnabled(LogicalTime logicalTime) throws FederateInternalError {
         isConstrained = true;
-        System.out.println("Current Logical Time: " + logicalTime.toString());
+        System.out.println("Federate is constrained.");
     }
 
     @Override

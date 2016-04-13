@@ -41,7 +41,6 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
             console.log(data);
-            $("#createFederate").modal('hide');
             //ctrl.updateFederates();
             var federate = {
                 "name": $scope.request.federateName,
@@ -56,6 +55,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                 "startOrPause": "Start"
             };
             $scope.federates.push(federate);
+            $("#createFederate").modal('hide');
         });
     };
 
