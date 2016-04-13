@@ -11,17 +11,27 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
     $scope.joinHardware = function() {
-        $http({method: "PUT", url: "/federates/hardware"}).success(function (data) {
+        var request = {
+            "crcAddress": $scope.request.crcAddress,
+            "federationName": $scope.request.federationName,
+            "federateName": "Raspberry",
+            "mechanism": "Real Time",
+            "fomUrl": $scope.request.fomUrl,
+            "strategy": "Regulating",
+            "step": "1",
+            "lookahead": "1"
+        };
+        $http({method: "PUT", url: "/federates/hardware", data: JSON.stringify(request)}).success(function (data) {
             var federate = {
-                "name": "Raspberry",
-                "federation": $scope.request.federationName,
-                "mechanism": "Time Stepped",
-                "fomUrl": $scope.request.fomUrl,
-                "fom": $scope.request.fomUrl.split('/').pop(),
+                "name": request.federateName,
+                "federation": request.federationName,
+                "mechanism": request.mechanism,
+                "fomUrl": request.fomUrl,
+                "fom": request.fomUrl.split('/').pop(),
                 "strategy": "Regulating",
                 "time": "0.00",
-                "step": "1",
-                "lookahead": "1",
+                "step": request.step,
+                "lookahead": request.lookahead,
                 "startOrPause": "Start"
             };
             $scope.federates.push(federate);

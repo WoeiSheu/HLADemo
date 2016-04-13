@@ -2,10 +2,7 @@ package info.hypocrisy.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import info.hypocrisy.model.Federate;
-import info.hypocrisy.model.FederateAttributes;
-import info.hypocrisy.model.FederateParameters;
-import info.hypocrisy.model.UpdateParameters;
+import info.hypocrisy.model.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -133,9 +130,14 @@ public class FederatesController {
 
     @RequestMapping(value = "/federates/hardware", method = RequestMethod.POST)
     @ResponseBody
-    public String processHardware(@RequestBody FederateParameters federateParameters) {
+    public String processHardware(@RequestBody HardwareParameters hardwareParameters) {
         if(hardwareConnected) {
-            //mapFederation
+            Federate federate = mapFederation.get(hardwareParameters.getFederationName()).get(hardwareParameters.getFederateName());
+            if(federate.isFirst) {
+                federate.setRealTimeOffset(hardwareParameters.getTime());
+            } else {
+                federate.setRealTime(hardwareParameters.getTime());
+            }
             return "{\"status\":\"Success\"}";
         } else {
             return "{\"status\":\"Haven't joined\"}";
@@ -144,8 +146,36 @@ public class FederatesController {
 
     @RequestMapping(value = "/federates/hardware", method = RequestMethod.PUT)
     @ResponseBody
-    public void joinHardware() {
+    public String joinHardware(@RequestBody FederateParameters federateParameters) {
+        String federationName = federateParameters.getFederationName();
+        String federateName = federateParameters.getFederateName();
+
+        Federate federate;
+        if(mapFederation.containsKey(federationName)) {
+            Map<String, Federate> mapFederate = mapFederation.get(federationName);
+            if (mapFederate.containsKey(federateName)) {
+                return "{\"status\":\"Have created before.\"}";
+            } else {
+                federate = new Federate(federateParameters);
+                federate.createAndJoin();
+                mapFederate.put(federateName, federate);
+            }
+        } else {
+            Map<String, Federate> mapFederate = new HashMap<>();
+            federate = new Federate(federateParameters);
+            federate.createAndJoin();
+            mapFederate.put(federateName,federate);
+            mapFederation.put(federationName,mapFederate);
+        }
+        /*
+        Thread thread = new Thread(federate);
+        thread.start();
+        federate.isFirst = false;
+        federate.setStatus(true);
+        */
         hardwareConnected = true;
+
+        return "{\"status\":\"Success\"}";
     }
 
     @RequestMapping(value = "/federates/update/{federationName}/{federateName}", method = RequestMethod.PUT)
@@ -196,6 +226,7 @@ public class FederatesController {
             }
         }
 
+        hardwareConnected = false;
         ResponseValue responseValue = new ResponseValue("Failure");
         return gson.toJson(responseValue);
     }
