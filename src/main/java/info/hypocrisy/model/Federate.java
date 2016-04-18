@@ -1,6 +1,5 @@
 package info.hypocrisy.model;
 
-import com.sun.org.apache.bcel.internal.generic.VariableLengthInstruction;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
 import hla.rti1516e.encoding.HLAunicodeString;
@@ -8,7 +7,6 @@ import hla.rti1516e.encoding.DecoderException;
 import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
-import hla.time1516.LogicalTimeLong;
 import se.pitch.prti1516e.time.HLAfloat64IntervalImpl;
 import se.pitch.prti1516e.time.HLAfloat64TimeImpl;
 
@@ -19,6 +17,13 @@ import java.net.URL;
  * This class implements a NullFederateAmbassador.
  */
 public class Federate extends NullFederateAmbassador implements Runnable{
+    public boolean isPhysicalDevice() {
+        return isPhysicalDevice;
+    }
+    public void setIsPhysicalDevice(boolean isPhysicalDevice) {
+        this.isPhysicalDevice = isPhysicalDevice;
+    }
+    private boolean isPhysicalDevice = false;
     private volatile boolean state = true;                       // if false, a thread should be destroyed.
     private volatile boolean status = false;                     // if false, a thread should pause, or we can say it doing nothing.
     private boolean isRegulating = false;               // flag to mark if this federate is Regulating
@@ -90,6 +95,11 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setName(federateParameters.getFederateName());
         federateAttributes.setFederation(federateParameters.getFederationName());
         federateAttributes.setCrcAddress(federateParameters.getCrcAddress());
+
+        if("Yes".equals(federateParameters.getIsPhysicalDevice())) {
+            this.setIsPhysicalDevice(true);
+        }
+
         String[] tmp = federateParameters.getFomUrl().split("/");
         federateAttributes.setFomName(tmp[tmp.length - 1]);
 
@@ -97,16 +107,12 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             federateAttributes.setMechanism(0);
         } else if( "Event Driven".equals(federateParameters.getMechanism()) ) {
             federateAttributes.setMechanism(1);
-        } else if( "Real Time".equals(federateParameters.getMechanism()) ) {
-            federateAttributes.setMechanism(2);
         } else {
-            federateAttributes.setMechanism(3);
+            federateAttributes.setMechanism(2);
         }
 
         federateAttributes.setFomUrl(federateParameters.getFomUrl());
         federateAttributes.setStrategy(federateParameters.getStrategy());
-        //federateAttributes.setTime(this.getTimeToMoveTo());
-        //federateAttributes.setStatus(status);
         federateAttributes.setStep(federateParameters.getStep());
         federateAttributes.setLookahead(federateParameters.getLookahead());
     }
@@ -189,6 +195,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 //rtiAmbassador.disableTimeRegulation();   // If it is not enabled, this method will throw exception.
                 //rtiAmbassador.disableTimeConstrained();
             }
+
             rtiAmbassador.enableCallbacks();
         } catch (Exception e) {
             System.out.println("Unable to join");
@@ -317,7 +324,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     isConstrained = false;
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
 
         }
         advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getStep()) );
@@ -329,7 +336,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         try {
             while(state) {
                 Thread.sleep(1000);
-                if(status && federateAttributes.getMechanism() == 0) {
+                if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 0) {
                     HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
 
                     String message = "Hello";
@@ -340,7 +347,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     parameters.put(paramterIdText, messageEncoder.toByteArray());
                     parameters.put(parameterIdSender, nameEncoder.toByteArray());
                     rtiAmbassador.sendInteraction(messageId, parameters, null);
-                    //rtiAmbassador.sendInteraction(messageId, parameters, null, currentTime.add(advancedStep));
 
                     try {
                         rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
@@ -348,7 +354,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     }
                 }
 
-                if(status && federateAttributes.getMechanism() == 1) {
+                if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 1) {
                     HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
 
                     String message = "Hello";
@@ -360,16 +366,20 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     parameters.put(parameterIdSender, nameEncoder.toByteArray());
 
                     HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
-                    HLAfloat64Time timestamp = currentTime.add(lookahead);
-                    rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
-
+                    HLAfloat64Time timestamp = currentTime.add(lookahead).add(advancedStep);
+                    try {
+                        rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
+                        rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
+                    } catch (RTIexception e) {
+                        e.printStackTrace();
+                    }
                     try {
                         rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                     }
                 }
 
-                if(status && federateAttributes.getMechanism() == 2) {
+                if(status && isPhysicalDevice && federateAttributes.getMechanism() == 0) {
                     HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
 
                     String message = "Hello";
@@ -381,12 +391,35 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     parameters.put(parameterIdSender, nameEncoder.toByteArray());
 
                     rtiAmbassador.sendInteraction(messageId, parameters, null);
-                    //HLAfloat64Time timestamp = currentTime;
-                    //rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
 
                     try {
                         rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
-                        System.out.println(realTime.subtract(realTimeOffset).getValue());
+                    } catch (Exception e) {
+                    }
+                }
+
+                if(status && isPhysicalDevice && federateAttributes.getMechanism() == 1) {
+                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
+
+                    String message = "Hello";
+
+                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
+                    messageEncoder.setValue(message);
+                    parameters.put(paramterIdText, messageEncoder.toByteArray());
+                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
+
+                    HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
+                    HLAfloat64Time timestamp = realTime.subtract(realTimeOffset).add(lookahead);
+                    try {
+                        //rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
+                        rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
+                    } catch (RTIexception e) {
+
+                    }
+
+                    try {
+                        rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
                     } catch (Exception e) {
                     }
                 }
@@ -410,14 +443,14 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                     parameters.put(paramterIdText, messageEncoder.toByteArray());
                     parameters.put(parameterIdSender, nameEncoder.toByteArray());
 
-                    Double epsilon = 0.00001;
+                    Double epsilon = 0.00001;       // Reserve for using later
                     HLAfloat64Interval ts = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead())+0.5);
                     HLAfloat64Time timestamp = currentTime.add(ts);
                     rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
 
                     try {
                         rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                     }
                 } catch (RTIexception e) {
                     e.printStackTrace();
@@ -486,21 +519,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        System.out.println("Receive message with timestamp: " + theTime.toString());
-    }
-
-    @Override
-    public void receiveInteraction(InteractionClassHandle interactionClass,
-                                   ParameterHandleValueMap theParameters,
-                                   byte[] userSuppliedTag,
-                                   OrderType sentOrdering,
-                                   TransportationTypeHandle theTransport,
-                                   LogicalTime theTime,
-                                   OrderType receivedOrdering,
-                                   MessageRetractionHandle retractionHandle,
-                                   SupplementalReceiveInfo receiveInfo)
-            throws FederateInternalError {
-        System.out.println("Receive message with timestamp: " + theTime.toString());
+        System.out.println(this.federateAttributes.getName() + ": Receive message with timestamp: " + theTime.toString());
     }
 
     @Override
@@ -613,6 +632,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     @Override
     public void timeAdvanceGrant(LogicalTime logicalTime) throws FederateInternalError {
         currentTime = (HLAfloat64Time) logicalTime;
-        System.out.println("Time Advance to " + logicalTime.toString() + " Successfully");
+        System.out.println(this.federateAttributes.getName() + ": Time Advance to " + logicalTime.toString() + " Successfully");
     }
 }

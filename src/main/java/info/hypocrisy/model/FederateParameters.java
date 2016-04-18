@@ -7,6 +7,7 @@ package info.hypocrisy.model;
 public class FederateParameters{
     private String id;
     private String crcAddress;
+    private String isPhysicalDevice;
     private String federationName;
     private String federateName;
     private String mechanism;
@@ -20,6 +21,9 @@ public class FederateParameters{
     }
     public String getCrcAddress() {
         return crcAddress;
+    }
+    public String getIsPhysicalDevice() {
+        return isPhysicalDevice;
     }
     public String getFederationName() {
         return federationName;
@@ -48,6 +52,9 @@ public class FederateParameters{
     }
     public void setCrcAddress(String crcAddress) {
         this.crcAddress = crcAddress;
+    }
+    public void setIsPhysicalDevice(String isPhysicalDevice) {
+        this.isPhysicalDevice = isPhysicalDevice;
     }
     public void setFederationName(String federationName) {
         this.federationName = federationName;

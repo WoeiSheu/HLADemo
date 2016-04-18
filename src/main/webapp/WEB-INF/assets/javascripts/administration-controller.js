@@ -6,37 +6,9 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     var ctrl = this;
 
     var host = window.location.protocol + "//" + window.location.host;
-    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.request = {"crcAddress":"192.168.1.105", "isPhysicalDevice":"No", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
     $scope.availableMechanisms = ["Time Stepped", "Event Driven"];
     $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
-
-    $scope.joinHardware = function() {
-        var request = {
-            "crcAddress": $scope.request.crcAddress,
-            "federationName": $scope.request.federationName,
-            "federateName": "Raspberry",
-            "mechanism": "Real Time",
-            "fomUrl": $scope.request.fomUrl,
-            "strategy": "Regulating",
-            "step": "1",
-            "lookahead": "1"
-        };
-        $http({method: "PUT", url: "/federates/hardware", data: JSON.stringify(request)}).success(function (data) {
-            var federate = {
-                "name": request.federateName,
-                "federation": request.federationName,
-                "mechanism": request.mechanism,
-                "fomUrl": request.fomUrl,
-                "fom": request.fomUrl.split('/').pop(),
-                "strategy": "Regulating",
-                "time": "0.00",
-                "step": request.step,
-                "lookahead": request.lookahead,
-                "startOrPause": "Start"
-            };
-            $scope.federates.push(federate);
-        });
-    };
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {

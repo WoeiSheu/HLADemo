@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -22,27 +21,8 @@ import java.util.*;
 //@RequestMapping("/federates")
 public class FederatesController {
     boolean hardwareConnected = false;
-    Map<String,Map<String,Federate>> mapFederation = new HashMap<String, Map<String, Federate>>();
+    Map<String,Map<String,Federate>> mapFederation = new HashMap<>();
     Gson gson = new GsonBuilder().serializeNulls().create();
-
-    private class ResponseValue {
-        private String status;
-
-        public ResponseValue() {
-            this.status = "Success";
-        }
-        public ResponseValue(String status) {
-            this.status = status;
-        }
-
-        public String getStatus() {
-            return status;
-        }
-
-        public void setStatus(String status) {
-            this.status = status;
-        }
-    }
 
     @RequestMapping(value = "/federates", method = RequestMethod.GET)
     @ResponseBody
@@ -51,7 +31,7 @@ public class FederatesController {
         Iterator<Map.Entry<String,Map<String,Federate>>> iterFederation = federationsSet.iterator();
 
         //ArrayList<String> federationsName = new ArrayList<String>();
-        Map<String,Map<String,FederateAttributes>> federatesAttributesMap = new HashMap<String, Map<String, FederateAttributes>>();
+        Map<String,Map<String,FederateAttributes>> federatesAttributesMap = new HashMap<>();
         while (iterFederation.hasNext()) {
             Map.Entry<String, Map<String, Federate>> entry1 = iterFederation.next();
             //federationsName.add(entry.getKey());
@@ -60,7 +40,7 @@ public class FederatesController {
             Set<Map.Entry<String, Federate>> federatesSet = mapFederate.entrySet();
             Iterator<Map.Entry<String, Federate>> iterFederate = federatesSet.iterator();
 
-            Map<String, FederateAttributes> federateAttributesMap = new HashMap<String, FederateAttributes>();
+            Map<String, FederateAttributes> federateAttributesMap = new HashMap<>();
             while (iterFederate.hasNext()) {
                 Map.Entry<String, Federate> entry2 = iterFederate.next();
                 /**********************
@@ -97,19 +77,23 @@ public class FederatesController {
                 mapFederate.put(federateName,federate);
             }
         } else {
-            Map<String,Federate> mapFederate = new HashMap<String, Federate>();
+            Map<String,Federate> mapFederate = new HashMap<>();
             Federate federate = new Federate(federateParameters);
             federate.createAndJoin();
             mapFederate.put(federateName,federate);
             mapFederation.put(federationName,mapFederate);
         }
-        ResponseValue responseValue = new ResponseValue("Success");
-        return gson.toJson(responseValue);
+
+        if("Yes".equals(federateParameters.getIsPhysicalDevice())) {
+            hardwareConnected = true;
+        }
+
+        return "{\"status\":\"Success\"}";
     }
 
     @RequestMapping(value = "/federates/fomFile", method = RequestMethod.POST)
     @ResponseBody
-    public String uploadFomFile(MultipartHttpServletRequest request, HttpServletResponse response) {
+    public String uploadFomFile(MultipartHttpServletRequest request) {
         //FileSystemResource resource = new FileSystemResource("/WEB-INF/assets/config/some.xml");
         Iterator<String> iter = request.getFileNames();
         MultipartFile file = request.getFile(iter.next());
@@ -142,40 +126,6 @@ public class FederatesController {
         } else {
             return "{\"status\":\"Haven't joined\"}";
         }
-    }
-
-    @RequestMapping(value = "/federates/hardware", method = RequestMethod.PUT)
-    @ResponseBody
-    public String joinHardware(@RequestBody FederateParameters federateParameters) {
-        String federationName = federateParameters.getFederationName();
-        String federateName = federateParameters.getFederateName();
-
-        Federate federate;
-        if(mapFederation.containsKey(federationName)) {
-            Map<String, Federate> mapFederate = mapFederation.get(federationName);
-            if (mapFederate.containsKey(federateName)) {
-                return "{\"status\":\"Have created before.\"}";
-            } else {
-                federate = new Federate(federateParameters);
-                federate.createAndJoin();
-                mapFederate.put(federateName, federate);
-            }
-        } else {
-            Map<String, Federate> mapFederate = new HashMap<>();
-            federate = new Federate(federateParameters);
-            federate.createAndJoin();
-            mapFederate.put(federateName,federate);
-            mapFederation.put(federationName,mapFederate);
-        }
-        /*
-        Thread thread = new Thread(federate);
-        thread.start();
-        federate.isFirst = false;
-        federate.setStatus(true);
-        */
-        hardwareConnected = true;
-
-        return "{\"status\":\"Success\"}";
     }
 
     @RequestMapping(value = "/federates/update/{federationName}/{federateName}", method = RequestMethod.PUT)
@@ -211,6 +161,9 @@ public class FederatesController {
         if(mapFederation.containsKey(federationName)) {
             if( mapFederation.get(federationName).containsKey(federateName) ) {
                 Federate federate = mapFederation.get(federationName).get(federateName);
+                if(federate.isPhysicalDevice()) {
+                    hardwareConnected = false;
+                }
                 federate.setState(false);
                 federate.destroy();
 
@@ -219,17 +172,12 @@ public class FederatesController {
                     mapFederation.remove(federationName);
                 }
 
-                ResponseValue responseValue = new ResponseValue("Success");
-                return gson.toJson(responseValue);
+                return "{\"status\":\"Success\"}";
             } else {
                 mapFederation.remove(federationName);
             }
         }
 
-        if("Raspberry".equals(federateName)) {
-            hardwareConnected = false;
-        }
-        ResponseValue responseValue = new ResponseValue("Failure");
-        return gson.toJson(responseValue);
+        return "{\"status\":\"Success\"}";
     }
 }
