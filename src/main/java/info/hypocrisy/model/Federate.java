@@ -1,9 +1,8 @@
 package info.hypocrisy.model;
 
+import com.sun.management.MissionControl;
 import hla.rti1516e.*;
-import hla.rti1516e.encoding.EncoderFactory;
-import hla.rti1516e.encoding.HLAunicodeString;
-import hla.rti1516e.encoding.DecoderException;
+import hla.rti1516e.encoding.*;
 import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
@@ -16,7 +15,7 @@ import java.net.URL;
  * Created by Hypocrisy on 3/23/2016.
  * This class implements a NullFederateAmbassador.
  */
-public class Federate extends NullFederateAmbassador implements Runnable{
+public class Federate extends NullFederateAmbassador implements Runnable {
     public boolean isPhysicalDevice() {
         return isPhysicalDevice;
     }
@@ -24,15 +23,44 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         this.isPhysicalDevice = isPhysicalDevice;
     }
     private boolean isPhysicalDevice = false;
-    private volatile boolean state = true;                       // if false, a thread should be destroyed.
-    private volatile boolean status = false;                     // if false, a thread should pause, or we can say it doing nothing.
+    private volatile boolean state = true;              // if false, a thread should be destroyed.
+    public void setState(boolean state) {
+        this.state = state;
+    }
+    private volatile boolean status = false;            // if false, a thread should pause, or we can say it doing nothing.
+    public void setStatus(boolean status) {
+        this.status = status;
+    }
     private boolean isRegulating = false;               // flag to mark if this federate is Regulating
     private boolean isConstrained = false;              // flag to mark if this federate is Constrained
 
     private RTIambassador rtiAmbassador;
+    /**********************
+     * All interaction class handle and their parameters' handle
+     **********************/
+    private InteractionClassHandle cruiseMissile;
+    private ParameterHandle cruiseMissileStatus;
+    private ParameterHandle cruiseMissilePosition;
+    private InteractionClassHandle early_warningRadar;
+    private ParameterHandle early_warningRadarStatus;
+    private ParameterHandle early_warningRadarPosition;
+    private InteractionClassHandle missionDistribution;
+    private ParameterHandle strategyOfMissionDistribution;
+    private InteractionClassHandle anti_aircraftMissile;
+    private ParameterHandle anti_aircraftStatus;
+    private ParameterHandle anti_aircraftMissilePosition;
+    private InteractionClassHandle routePlanning;
+    private ParameterHandle route;
+    private InteractionClassHandle trackingRadar;
+    private ParameterHandle trackingRadarStatus;
+    private ParameterHandle trackingRadarPosition;
     private InteractionClassHandle messageId;
-    private ParameterHandle paramterIdText;
+    private ParameterHandle parameterIdText;
     private ParameterHandle parameterIdSender;
+    private InteractionClassHandle[] interactionClasses;
+    /**********************
+     * All object instance handle and their attributes' handle
+     **********************/
     private ObjectInstanceHandle userId;
     private AttributeHandle attributeIdName;
     private String username;
@@ -41,14 +69,27 @@ public class Federate extends NullFederateAmbassador implements Runnable{
     private volatile boolean reservationSucceeded;
     private final Object reservationSemaphore = new Object();
 
+    private final Map<ObjectInstanceHandle, Participant> knownObjects = new HashMap<ObjectInstanceHandle, Participant>();
+    /**********************
+     * Sync variables.
+     **********************/
     private final String SYNC_POINT = "ReadyToRun";
     private volatile boolean isRegisterSyncPointSucceeded = false;
     private volatile boolean isSynchronized = false;
 
+    /**********************
+     * encode, decode
+     **********************/
     private EncoderFactory encoderFactory;
+    DataElementFactory factory = new DataElementFactory() {
+        public DataElement createElement(int index) {
+            return encoderFactory.createHLAfloat32LE();
+        }
+    };
 
-    private final Map<ObjectInstanceHandle, Participant> knownObjects = new HashMap<ObjectInstanceHandle, Participant>();
-
+    /**********************
+     * physical device time
+     **********************/
     HLAfloat64Interval realTimeOffset = new HLAfloat64IntervalImpl(0.00);
     private HLAfloat64Time realTime = new HLAfloat64TimeImpl(0.00);
     public void setRealTimeOffset(String realTimeOffset) {
@@ -58,6 +99,9 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         this.realTime = new HLAfloat64TimeImpl(Double.parseDouble(realTime));
     }
 
+    /**********************
+     * Participant for object instance.
+     **********************/
     private static class Participant {
         private final String name;
 
@@ -73,22 +117,9 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         }
     }
 
-    public Federate() {
-        // For test
-        federateAttributes = new FederateAttributes();
-        federateAttributes.setName("TestFederate");
-        federateAttributes.setFederation("TestFederation");
-        federateAttributes.setCrcAddress("localhost");
-        federateAttributes.setMechanism(1);
-        federateAttributes.setFomName("HLADemo");
-        federateAttributes.setFomUrl("http://localhost:8080/assets/config/HLADemo.xml");
-        federateAttributes.setStrategy("Regulating and Constrained");
-        //federateAttributes.setTime(this.getTimeToMoveTo());
-        //federateAttributes.setStatus(status);
-        federateAttributes.setStep("1");
-        federateAttributes.setLookahead("1");
-    }
-
+    /**********************
+     * Constructor
+     **********************/
     private FederateAttributes federateAttributes;
     public Federate(FederateParameters federateParameters) {
         federateAttributes = new FederateAttributes();
@@ -98,6 +129,29 @@ public class Federate extends NullFederateAmbassador implements Runnable{
 
         if("Yes".equals(federateParameters.getIsPhysicalDevice())) {
             this.setIsPhysicalDevice(true);
+        }
+
+        switch (federateParameters.getType()) {
+            case "Cruise Missile":
+                federateAttributes.setType(0);
+                break;
+            case "Early-warning Radar":
+                federateAttributes.setType(1);
+                break;
+            case "Mission Distribution":
+                federateAttributes.setType(2);
+                break;
+            case "Anti-aircraft Missile":
+                federateAttributes.setType(3);
+                break;
+            case "Route Planning":
+                federateAttributes.setType(4);
+                break;
+            case "Tracking Radar":
+                federateAttributes.setType(5);
+                break;
+            default:
+                federateAttributes.setType(6);
         }
 
         String[] tmp = federateParameters.getFomUrl().split("/");
@@ -115,13 +169,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setStrategy(federateParameters.getStrategy());
         federateAttributes.setStep(federateParameters.getStep());
         federateAttributes.setLookahead(federateParameters.getLookahead());
-    }
-
-    public void setState(boolean state) {
-        this.state = state;
-    }
-    public void setStatus(boolean status) {
-        this.status = status;
     }
 
     public FederateAttributes getFederateAttributes() {
@@ -149,7 +196,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                 System.out.println("Unable to create RTI ambassador.");
                 return;
             }
-
             String crcAddress = federateAttributes.getCrcAddress();
             String settingsDesignator = "crcAddress=" + crcAddress;
             rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
@@ -204,12 +250,59 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             /**********************
              * Subscribe and publish interactions
              **********************/
+            cruiseMissile = rtiAmbassador.getInteractionClassHandle("CruiseMissile");
+            cruiseMissileStatus = rtiAmbassador.getParameterHandle(cruiseMissile,"Status");
+            cruiseMissilePosition = rtiAmbassador.getParameterHandle(cruiseMissile,"Position");
+            early_warningRadar = rtiAmbassador.getInteractionClassHandle("Early_warningRadar");
+            early_warningRadarStatus = rtiAmbassador.getParameterHandle(early_warningRadar,"Status");
+            early_warningRadarPosition = rtiAmbassador.getParameterHandle(early_warningRadar,"Position");
+            missionDistribution = rtiAmbassador.getInteractionClassHandle("MissionDistribution");
+            strategyOfMissionDistribution = rtiAmbassador.getParameterHandle(missionDistribution,"Strategy");
+            anti_aircraftMissile = rtiAmbassador.getInteractionClassHandle("Anti_aircraftMissile");
+            anti_aircraftStatus = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Status");
+            anti_aircraftMissilePosition = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Position");
+            routePlanning = rtiAmbassador.getInteractionClassHandle("RoutePlanning");
+            route = rtiAmbassador.getParameterHandle(routePlanning,"Route");
+            trackingRadar = rtiAmbassador.getInteractionClassHandle("TrackingRadar");
+            trackingRadarStatus = rtiAmbassador.getParameterHandle(trackingRadar,"Status");
+            trackingRadarPosition = rtiAmbassador.getParameterHandle(trackingRadar,"Position");
             messageId = rtiAmbassador.getInteractionClassHandle("Communication");
-            paramterIdText = rtiAmbassador.getParameterHandle(messageId, "Message");
+            parameterIdText = rtiAmbassador.getParameterHandle(messageId, "Message");
             parameterIdSender = rtiAmbassador.getParameterHandle(messageId, "Sender");
 
-            rtiAmbassador.subscribeInteractionClass(messageId);
-            rtiAmbassador.publishInteractionClass(messageId);
+            interactionClasses = new InteractionClassHandle[]{cruiseMissile,early_warningRadar,missionDistribution,anti_aircraftMissile,routePlanning,trackingRadar,messageId};
+            switch (federateAttributes.getType()) {
+                case 0:
+                    rtiAmbassador.publishInteractionClass(cruiseMissile);
+                    break;
+                case 1:
+                    rtiAmbassador.publishInteractionClass(early_warningRadar);
+                    rtiAmbassador.subscribeInteractionClass(cruiseMissile);
+                    break;
+                case 2:
+                    rtiAmbassador.publishInteractionClass(missionDistribution);
+                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
+                    rtiAmbassador.subscribeInteractionClass(trackingRadar);
+                    break;
+                case 3:
+                    rtiAmbassador.publishInteractionClass(anti_aircraftMissile);
+                    rtiAmbassador.subscribeInteractionClass(routePlanning);
+                    break;
+                case 4:
+                    rtiAmbassador.publishInteractionClass(routePlanning);
+                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
+                    rtiAmbassador.subscribeInteractionClass(trackingRadar);
+                    rtiAmbassador.subscribeInteractionClass(missionDistribution);
+                    break;
+                case 5:
+                    rtiAmbassador.publishInteractionClass(trackingRadar);
+                    rtiAmbassador.subscribeInteractionClass(anti_aircraftMissile);
+                    break;
+                default:
+                    rtiAmbassador.subscribeInteractionClass(messageId);
+                    rtiAmbassador.publishInteractionClass(messageId);
+                    break;
+            }
 
             /**********************
              * Subscribe and publish objects
@@ -285,7 +378,6 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         federateAttributes.setLookahead(updateParameters.getLookahead());
 
         HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getLookahead()) );
-        //rtiAmbassador->enableAsynchronousDelivery();
         try {
             if ("Regulating".equals(federateAttributes.getStrategy())) {
                 if(isRegulating) {
@@ -330,134 +422,128 @@ public class Federate extends NullFederateAmbassador implements Runnable{
         advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getStep()) );
     }
 
+    public ParameterHandleValueMap setParameters() {
+        try {
+            ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+
+            HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
+            HLAinteger16LE statusEncoder = encoderFactory.createHLAinteger16LE();
+            HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
+            HLAfloat32LE index = encoderFactory.createHLAfloat32LE();
+            HLAvariableArray strategyEncoder = encoderFactory.createHLAvariableArray(factory);
+
+            switch (federateAttributes.getType()) {
+                case 0:
+                    statusEncoder.setValue((short) 1);
+                    messageEncoder.setValue("Cruise Missile Position");
+                    parameters.put(cruiseMissileStatus, statusEncoder.toByteArray());
+                    parameters.put(cruiseMissilePosition, messageEncoder.toByteArray());
+                    break;
+                case 1:
+                    statusEncoder.setValue((short) 1);
+                    messageEncoder.setValue("Early Warning Radar");
+                    parameters.put(early_warningRadarStatus, statusEncoder.toByteArray());
+                    parameters.put(early_warningRadarPosition, messageEncoder.toByteArray());
+                    break;
+                case 2:
+                    index.setValue((float) 1.00);
+                    strategyEncoder.addElement(index);
+                    parameters.put(strategyOfMissionDistribution, strategyEncoder.toByteArray());
+                    break;
+                case 3:
+                    statusEncoder.setValue((short) 1);
+                    messageEncoder.setValue("Anti Aircraft Missile");
+                    parameters.put(anti_aircraftStatus, statusEncoder.toByteArray());
+                    parameters.put(anti_aircraftMissilePosition, messageEncoder.toByteArray());
+                    break;
+                case 4:
+                    index.setValue((float) 1.00);
+                    strategyEncoder.addElement(index);
+                    parameters.put(route, strategyEncoder.toByteArray());
+                    break;
+                case 5:
+                    statusEncoder.setValue((short) 1);
+                    messageEncoder.setValue("Tracking Radar");
+                    parameters.put(trackingRadarStatus, statusEncoder.toByteArray());
+                    parameters.put(trackingRadarPosition, messageEncoder.toByteArray());
+                    break;
+                default:
+                    String message = "Test";
+                    messageEncoder.setValue(message);
+                    parameters.put(parameterIdText, messageEncoder.toByteArray());
+                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
+                    break;
+            }
+            return parameters;
+        } catch (RTIexception e) {
+
+        }
+        return null;
+    }
+
     public boolean isFirst = true;
     @Override
     public void run() {
         try {
             while(state) {
                 Thread.sleep(1000);
+
+                ParameterHandleValueMap parameters = setParameters();
+
                 if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 0) {
-                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
-
-                    String message = "Hello";
-
-                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
-                    messageEncoder.setValue(message);
-                    parameters.put(paramterIdText, messageEncoder.toByteArray());
-                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
-                    rtiAmbassador.sendInteraction(messageId, parameters, null);
-
+                    //rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()],parameters,null);
                     try {
                         rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()],parameters,null);
                     } catch (Exception ignored) {
                     }
                 }
 
                 if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 1) {
-                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
-
-                    String message = "Hello";
-
-                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
-                    messageEncoder.setValue(message);
-                    parameters.put(paramterIdText, messageEncoder.toByteArray());
-                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
-
                     HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
                     HLAfloat64Time timestamp = currentTime.add(lookahead).add(advancedStep);
                     try {
-                        rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
-                        rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
+                        rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
+                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
+                    } catch (Exception ignored) {
+                    }
+                    /*
+                    try {
+                        //rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
+                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
                     } catch (RTIexception e) {
                         e.printStackTrace();
                     }
-                    try {
-                        rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
-                    } catch (Exception ignored) {
-                    }
+                    */
                 }
 
                 if(status && isPhysicalDevice && federateAttributes.getMechanism() == 0) {
-                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
-
-                    String message = "Hello";
-
-                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
-                    messageEncoder.setValue(message);
-                    parameters.put(paramterIdText, messageEncoder.toByteArray());
-                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
-
-                    rtiAmbassador.sendInteraction(messageId, parameters, null);
-
+                    //rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null);
                     try {
                         rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
+                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null);
                     } catch (Exception e) {
                     }
                 }
 
                 if(status && isPhysicalDevice && federateAttributes.getMechanism() == 1) {
-                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
-
-                    String message = "Hello";
-
-                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
-                    messageEncoder.setValue(message);
-                    parameters.put(paramterIdText, messageEncoder.toByteArray());
-                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
-
                     HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
                     HLAfloat64Time timestamp = realTime.subtract(realTimeOffset).add(lookahead);
                     try {
-                        //rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
-                        rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
-                    } catch (RTIexception e) {
-
-                    }
-
-                    try {
                         rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
+                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
                     } catch (Exception e) {
                     }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-    }
-
-    public void test() {
-        try {
-            int i = 1;
-            while((i--)>0) {
-                try {
-                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
-
-                    String message = "Hello";
-
-                    ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
-                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
-                    messageEncoder.setValue(message);
-                    parameters.put(paramterIdText, messageEncoder.toByteArray());
-                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
-
-                    Double epsilon = 0.00001;       // Reserve for using later
-                    HLAfloat64Interval ts = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead())+0.5);
-                    HLAfloat64Time timestamp = currentTime.add(ts);
-                    rtiAmbassador.sendInteraction(messageId, parameters, null, timestamp);
-
+                    /*
                     try {
-                        rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
-                    } catch (Exception ignored) {
+                        //rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
+                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
+                    } catch (RTIexception e) {
                     }
-                } catch (RTIexception e) {
-                    e.printStackTrace();
+                    */
                 }
             }
         } catch (Exception ignored) {
-
         }
     }
 
@@ -484,8 +570,127 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                                    TransportationTypeHandle theTransport,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
+        System.out.println(this.federateAttributes.getName());
+
+        HLAinteger16LE statusDecoder = encoderFactory.createHLAinteger16LE();
+        HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
+        HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
+
+        if(interactionClass.equals(cruiseMissile)) {
+            if (!theParameters.containsKey(cruiseMissileStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(cruiseMissilePosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(cruiseMissileStatus));
+                positionDecoder.decode(theParameters.get(cruiseMissilePosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(early_warningRadar)) {
+            if (!theParameters.containsKey(early_warningRadarStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(early_warningRadarPosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(early_warningRadarStatus));
+                positionDecoder.decode(theParameters.get(early_warningRadarPosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(missionDistribution)) {
+            if (!theParameters.containsKey(strategyOfMissionDistribution)) {
+                System.out.println("Bad message received: No Strategy.");
+                return;
+            }
+            try {
+                variableArrayDecoder.decode(theParameters.get(strategyOfMissionDistribution));
+                String variableArray = variableArrayDecoder.toString();
+                System.out.println( variableArray );
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(anti_aircraftMissile)) {
+            if (!theParameters.containsKey(anti_aircraftStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(anti_aircraftMissilePosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(anti_aircraftStatus));
+                positionDecoder.decode(theParameters.get(anti_aircraftMissilePosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(routePlanning)) {
+            if (!theParameters.containsKey(route)) {
+                System.out.println("Bad message received: No Route.");
+                return;
+            }
+            try {
+                variableArrayDecoder.decode(theParameters.get(route));
+                String variableArray = variableArrayDecoder.toString();
+
+                System.out.println(variableArray);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(trackingRadar)) {
+            if (!theParameters.containsKey(trackingRadarStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(trackingRadarPosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(trackingRadarStatus));
+                positionDecoder.decode(theParameters.get(trackingRadarPosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
         if (interactionClass.equals(messageId)) {
-            if (!theParameters.containsKey(paramterIdText)) {
+            if (!theParameters.containsKey(parameterIdText)) {
                 System.out.println("Bad message received: No text.");
                 return;
             }
@@ -496,7 +701,7 @@ public class Federate extends NullFederateAmbassador implements Runnable{
             try {
                 HLAunicodeString messageDecoder = encoderFactory.createHLAunicodeString();
                 HLAunicodeString senderDecoder = encoderFactory.createHLAunicodeString();
-                messageDecoder.decode(theParameters.get(paramterIdText));
+                messageDecoder.decode(theParameters.get(parameterIdText));
                 senderDecoder.decode(theParameters.get(parameterIdSender));
                 String message = messageDecoder.getValue();
                 String sender = senderDecoder.getValue();
@@ -519,7 +724,149 @@ public class Federate extends NullFederateAmbassador implements Runnable{
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        System.out.println(this.federateAttributes.getName() + ": Receive message with timestamp: " + theTime.toString());
+
+        System.out.println(this.federateAttributes.getName() + ": " + theTime.toString());
+
+        HLAinteger16LE statusDecoder = encoderFactory.createHLAinteger16LE();
+        HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
+        HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
+
+        if(interactionClass.equals(cruiseMissile)) {
+            if (!theParameters.containsKey(cruiseMissileStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(cruiseMissilePosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(cruiseMissileStatus));
+                positionDecoder.decode(theParameters.get(cruiseMissilePosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(early_warningRadar)) {
+            if (!theParameters.containsKey(early_warningRadarStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(early_warningRadarPosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(early_warningRadarStatus));
+                positionDecoder.decode(theParameters.get(early_warningRadarPosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(missionDistribution)) {
+            if (!theParameters.containsKey(strategyOfMissionDistribution)) {
+                System.out.println("Bad message received: No Strategy.");
+                return;
+            }
+            try {
+                variableArrayDecoder.decode(theParameters.get(strategyOfMissionDistribution));
+                String variableArray = variableArrayDecoder.toString();
+                System.out.println( variableArray );
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(anti_aircraftMissile)) {
+            if (!theParameters.containsKey(anti_aircraftStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(anti_aircraftMissilePosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(anti_aircraftStatus));
+                positionDecoder.decode(theParameters.get(anti_aircraftMissilePosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(routePlanning)) {
+            if (!theParameters.containsKey(route)) {
+                System.out.println("Bad message received: No Route.");
+                return;
+            }
+            try {
+                variableArrayDecoder.decode(theParameters.get(route));
+                String variableArray = variableArrayDecoder.toString();
+
+                System.out.println(variableArray);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if(interactionClass.equals(trackingRadar)) {
+            if (!theParameters.containsKey(trackingRadarStatus)) {
+                System.out.println("Bad message received: No Status.");
+                return;
+            }
+            if (!theParameters.containsKey(trackingRadarPosition)) {
+                System.out.println("Bad message received: No Position.");
+                return;
+            }
+            try {
+                statusDecoder.decode(theParameters.get(trackingRadarStatus));
+                positionDecoder.decode(theParameters.get(trackingRadarPosition));
+                int status = statusDecoder.getValue();
+                String position = positionDecoder.getValue();
+
+                System.out.println(status + " " + position);
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
+
+        if (interactionClass.equals(messageId)) {
+            if (!theParameters.containsKey(parameterIdText)) {
+                System.out.println("Bad message received: No text.");
+                return;
+            }
+            if (!theParameters.containsKey(parameterIdSender)) {
+                System.out.println("Bad message received: No sender.");
+                return;
+            }
+            try {
+                HLAunicodeString messageDecoder = encoderFactory.createHLAunicodeString();
+                HLAunicodeString senderDecoder = encoderFactory.createHLAunicodeString();
+                messageDecoder.decode(theParameters.get(parameterIdText));
+                senderDecoder.decode(theParameters.get(parameterIdSender));
+                String message = messageDecoder.getValue();
+                String sender = senderDecoder.getValue();
+
+                System.out.println(sender + ": " + message);
+                System.out.print("> ");
+            } catch (DecoderException e) {
+                System.out.println("Failed to decode incoming interaction");
+            }
+        }
     }
 
     @Override

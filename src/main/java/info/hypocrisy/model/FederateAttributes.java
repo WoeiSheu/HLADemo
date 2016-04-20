@@ -9,11 +9,12 @@ public class FederateAttributes {
     private String federation;
     private String crcAddress;
     private int mechanism;          // 0: Time Stepped, 1: Event Driven
+    private int type;
     private String fomName;
     private String fomUrl;
     private String strategy;
     private Double time;
-    private Boolean status;
+    private Boolean status;         // Run or pause
     private String step;
     private String lookahead;
 
@@ -28,6 +29,9 @@ public class FederateAttributes {
     }
     public int getMechanism() {
         return mechanism;
+    }
+    public int getType() {
+        return type;
     }
     public String getFomName() {
         return fomName;
@@ -62,6 +66,9 @@ public class FederateAttributes {
     }
     public void setMechanism(int mechanism) {
         this.mechanism = mechanism;
+    }
+    public void setType(int type) {
+        this.type = type;
     }
     public void setFomName(String fomName) {
         this.fomName = fomName;

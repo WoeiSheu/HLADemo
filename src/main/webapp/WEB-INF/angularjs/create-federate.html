@@ -16,7 +16,13 @@
                     <div class="form-group">
                         <label class="control-label col-xs-4">Is Physical Device?</label>
                         <div class="col-xs-7">
-                            <select class="form-control" ng-model="request.isPhysicalDevice" ng-options="type for type in ['Yes','No']"></select>
+                            <select class="form-control" ng-model="request.isPhysicalDevice" ng-options="condition for condition in ['Yes','No']"></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-xs-4">Type</label>
+                        <div class="col-xs-7">
+                            <select class="form-control" ng-model="request.type" ng-options="type for type in availableTypes"></select>
                         </div>
                     </div>
                     <div class="form-group">

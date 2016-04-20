@@ -57,6 +57,98 @@
       <interactionClass>
          <name>HLAinteractionRoot</name>
          <interactionClass>
+            <name>CruiseMissile</name>
+            <sharing>PublishSubscribe</sharing>
+            <transportation>HLAreliable</transportation>
+            <order>TimeStamp</order>
+            <semantics>Cruise Missile</semantics>
+            <parameter>
+               <name>Status</name>
+               <dataType>HLAinteger16LE</dataType>
+               <semantics>Status of cruise missile</semantics>
+            </parameter>
+            <parameter>
+               <name>Position</name>
+               <dataType>HLAunicodeString</dataType>
+               <semantics>Position of cruise missile</semantics>
+            </parameter>
+         </interactionClass>
+         <interactionClass>
+            <name>Early_warningRadar</name>
+            <sharing>PublishSubscribe</sharing>
+            <transportation>HLAreliable</transportation>
+            <order>TimeStamp</order>
+            <semantics>Early Warning Radar</semantics>
+            <parameter>
+               <name>Status</name>
+               <dataType>HLAinteger16LE</dataType>
+               <semantics>Status of early warning radar missile</semantics>
+            </parameter>
+            <parameter>
+               <name>Position</name>
+               <dataType>HLAunicodeString</dataType>
+               <semantics>Position of cruise missile</semantics>
+            </parameter>
+         </interactionClass>
+         <interactionClass>
+            <name>MissionDistribution</name>
+            <sharing>PublishSubscribe</sharing>
+            <transportation>HLAreliable</transportation>
+            <order>TimeStamp</order>
+            <semantics>Mission Distribution</semantics>
+            <parameter>
+               <name>Strategy</name>
+               <dataType>HLAvariableArray</dataType>
+               <semantics>Strategy of mission distribution</semantics>
+            </parameter>
+         </interactionClass>
+         <interactionClass>
+            <name>Anti_aircraftMissile</name>
+            <sharing>PublishSubscribe</sharing>
+            <transportation>HLAreliable</transportation>
+            <order>TimeStamp</order>
+            <semantics>Anti Aircraft Missile</semantics>
+            <parameter>
+               <name>Status</name>
+               <dataType>HLAinteger16LE</dataType>
+               <semantics>Status of anti aircraft missile</semantics>
+            </parameter>
+            <parameter>
+               <name>Position</name>
+               <dataType>HLAunicodeString</dataType>
+               <semantics>Position of anti aircraft missile</semantics>
+            </parameter>
+         </interactionClass>
+         <interactionClass>
+            <name>RoutePlanning</name>
+            <sharing>PublishSubscribe</sharing>
+            <transportation>HLAreliable</transportation>
+            <order>TimeStamp</order>
+            <semantics>Route Planning</semantics>
+            <parameter>
+               <name>Route</name>
+               <dataType>HLAvariableArray</dataType>
+               <semantics>Route</semantics>
+            </parameter>
+         </interactionClass>
+         <interactionClass>
+            <name>TrackingRadar</name>
+            <sharing>PublishSubscribe</sharing>
+            <transportation>HLAreliable</transportation>
+            <order>TimeStamp</order>
+            <semantics>Tracking Radar</semantics>
+            <parameter>
+               <name>Status</name>
+               <dataType>HLAinteger16LE</dataType>
+               <semantics>Status of tracking radar</semantics>
+            </parameter>
+            <parameter>
+               <name>Position</name>
+               <dataType>HLAunicodeString</dataType>
+               <semantics>Position of anti aircraft missile</semantics>
+            </parameter>
+         </interactionClass>
+         <interactionClass>
             <name>Communication</name>
             <sharing>PublishSubscribe</sharing>
             <transportation>HLAreliable</transportation>

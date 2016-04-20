@@ -8,6 +8,7 @@ public class FederateParameters{
     private String id;
     private String crcAddress;
     private String isPhysicalDevice;
+    private String type;
     private String federationName;
     private String federateName;
     private String mechanism;
@@ -24,6 +25,9 @@ public class FederateParameters{
     }
     public String getIsPhysicalDevice() {
         return isPhysicalDevice;
+    }
+    public String getType() {
+        return type;
     }
     public String getFederationName() {
         return federationName;
@@ -55,6 +59,9 @@ public class FederateParameters{
     }
     public void setIsPhysicalDevice(String isPhysicalDevice) {
         this.isPhysicalDevice = isPhysicalDevice;
+    }
+    public void setType(String type) {
+        this.type = type;
     }
     public void setFederationName(String federationName) {
         this.federationName = federationName;
