@@ -1,7 +1,5 @@
 package info.hypocrisy.controller;
 
-import info.hypocrisy.model.Federate;
-import info.hypocrisy.model.FederateParameters;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +13,7 @@ import java.util.Map;
 
 @Controller
 public class TestController {
-    Map<String,Map<String,Federate>> mapFederation = new HashMap<String, Map<String, Federate>>();
+    //Map<String,Map<String,Federate>> mapFederation = new HashMap<>();
 
     @RequestMapping(value = "/test", method = RequestMethod.GET)
     public String index(){
@@ -24,7 +22,7 @@ public class TestController {
 
     @RequestMapping(value = "/test/federate", method = RequestMethod.POST)
     @ResponseBody
-    public String create(@RequestBody FederateParameters federateParameters){
+    public String create(){
         return "{\"status\":\"Success\"}";
     }
 

@@ -1,261 +1,361 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objectModel xmlns="http://www.sisostds.org/schemas/IEEE1516-2010"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="http://www.sisostds.org/schemas/IEEE1516-2010 http://www.sisostds.org/schemas/IEEE1516-DIF-2010.xsd">
-   <modelIdentification>
-      <name>HLADemo.xml</name>
-      <type>FOM</type>
-      <version>1.0</version>
-      <modificationDate>2001-05-21</modificationDate>
-      <securityClassification>Undefined</securityClassification>
-      <purpose>DDM and MOM stuffs are added.</purpose>
-      <applicationDomain>HLA RTI Verification</applicationDomain>
-      <description>Undefined</description>
-      <poc>
-         <pocType>Primary author</pocType>
-         <pocName>Susan Symington</pocName>
-         <pocOrg>MITRE W150</pocOrg>
-         <pocTelephone>+1 703-883-7209</pocTelephone>
-         <pocEmail>susan@mitre.org</pocEmail>
-      </poc>
-      <poc>
-         <pocType>Sponsor</pocType>
-         <pocName>DMSO</pocName>
-      </poc>
-      <reference>
-         <type>Text</type>
-         <identification>http://www.dmso.mil/index.php?page=72</identification>
-      </reference>
-      <reference>
-         <type>HLA Evolved Conversion Tool</type>
-         <identification>Pitch Visual OMT 1516 v1.5.1</identification>
-      </reference>
-      <reference>
-         <type>Converted From</type>
-         <identification>HLADemo.xml</identification>
-      </reference>
-   </modelIdentification>
-   <objects>
-      <objectClass>
-         <name>HLAobjectRoot</name>
-         <objectClass>
-            <name>Participant</name>
-            <sharing>Neither</sharing>
-            <attribute>
-               <name>Name</name>
-               <dataType>HLAunicodeString</dataType>
-               <updateType>Conditional</updateType>
-               <ownership>DivestAcquire</ownership>
-               <sharing>Neither</sharing>
-               <transportation>HLAreliable</transportation>
-               <order>TimeStamp</order>
-            </attribute>
-         </objectClass>
-      </objectClass>
-   </objects>
-   <interactions>
-      <interactionClass>
-         <name>HLAinteractionRoot</name>
-         <interactionClass>
-            <name>CruiseMissile</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Cruise Missile</semantics>
-            <parameter>
-               <name>Status</name>
-               <dataType>HLAinteger16LE</dataType>
-               <semantics>Status of cruise missile</semantics>
-            </parameter>
-            <parameter>
-               <name>Position</name>
-               <dataType>HLAunicodeString</dataType>
-               <semantics>Position of cruise missile</semantics>
-            </parameter>
-         </interactionClass>
-         <interactionClass>
-            <name>Early_warningRadar</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Early Warning Radar</semantics>
-            <parameter>
-               <name>Status</name>
-               <dataType>HLAinteger16LE</dataType>
-               <semantics>Status of early warning radar missile</semantics>
-            </parameter>
-            <parameter>
-               <name>Position</name>
-               <dataType>HLAunicodeString</dataType>
-               <semantics>Position of cruise missile</semantics>
-            </parameter>
-         </interactionClass>
-         <interactionClass>
-            <name>MissionDistribution</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Mission Distribution</semantics>
-            <parameter>
-               <name>Strategy</name>
-               <dataType>HLAvariableArray</dataType>
-               <semantics>Strategy of mission distribution</semantics>
-            </parameter>
-         </interactionClass>
-         <interactionClass>
-            <name>Anti_aircraftMissile</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Anti Aircraft Missile</semantics>
-            <parameter>
-               <name>Status</name>
-               <dataType>HLAinteger16LE</dataType>
-               <semantics>Status of anti aircraft missile</semantics>
-            </parameter>
-            <parameter>
-               <name>Position</name>
-               <dataType>HLAunicodeString</dataType>
-               <semantics>Position of anti aircraft missile</semantics>
-            </parameter>
-         </interactionClass>
-         <interactionClass>
-            <name>RoutePlanning</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Route Planning</semantics>
-            <parameter>
-               <name>Route</name>
-               <dataType>HLAvariableArray</dataType>
-               <semantics>Route</semantics>
-            </parameter>
-         </interactionClass>
-         <interactionClass>
-            <name>TrackingRadar</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Tracking Radar</semantics>
-            <parameter>
-               <name>Status</name>
-               <dataType>HLAinteger16LE</dataType>
-               <semantics>Status of tracking radar</semantics>
-            </parameter>
-            <parameter>
-               <name>Position</name>
-               <dataType>HLAunicodeString</dataType>
-               <semantics>Position of anti aircraft missile</semantics>
-            </parameter>
-         </interactionClass>
-         <interactionClass>
-            <name>Communication</name>
-            <sharing>PublishSubscribe</sharing>
-            <transportation>HLAreliable</transportation>
-            <order>TimeStamp</order>
-            <semantics>Communication</semantics>
-            <parameter>
-               <name>Message</name>
-               <dataType>HLAunicodeString</dataType>
-               <semantics>Contents of message</semantics>
-            </parameter>
-            <parameter>
-               <name>Sender</name>
-               <dataType>HLAunicodeString</dataType>
-               <semantics>The name of the person that sent the message.</semantics>
-            </parameter>
-         </interactionClass>
-      </interactionClass>
-   </interactions>
-   <dimensions>
-   </dimensions>
-   <time>
-      <timeStamp>
-         <dataType>VerifierIntegerTime</dataType>
-      </timeStamp>
-      <lookahead>
-         <dataType>VerifierIntegerTime</dataType>
-      </lookahead>
-   </time>
-   <tags>
-      <updateReflectTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </updateReflectTag>
-      <sendReceiveTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </sendReceiveTag>
-      <deleteRemoveTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </deleteRemoveTag>
-      <divestitureRequestTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </divestitureRequestTag>
-      <divestitureCompletionTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </divestitureCompletionTag>
-      <acquisitionRequestTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </acquisitionRequestTag>
-      <requestUpdateTag>
-         <dataType>NA</dataType>
-         <semantics>NA</semantics>
-      </requestUpdateTag>
-   </tags>
-   <synchronizations>
-      <synchronizationPoint>
-         <label>First</label>
-         <dataType>NA</dataType>
-         <capability>RegisterAchieve</capability>
-      </synchronizationPoint>
-      <synchronizationPoint>
-         <label>Second</label>
-         <dataType>NA</dataType>
-         <capability>RegisterAchieve</capability>
-      </synchronizationPoint>
-   </synchronizations>
-   <transportations/>
-   <switches>
-      <autoProvide isEnabled="false"/>
-      <conveyRegionDesignatorSets isEnabled="false"/>
-      <conveyProducingFederate isEnabled="false"/>
-      <attributeScopeAdvisory isEnabled="false"/>
-      <attributeRelevanceAdvisory isEnabled="false"/>
-      <objectClassRelevanceAdvisory isEnabled="false"/>
-      <interactionRelevanceAdvisory isEnabled="false"/>
-      <serviceReporting isEnabled="false"/>
-      <exceptionReporting isEnabled="false"/>
-      <delaySubscriptionEvaluation isEnabled="false"/>
-      <automaticResignAction resignAction="CancelThenDeleteThenDivest"/>
-   </switches>
-   <dataTypes>
-      <basicDataRepresentations>
-         <basicData>
-            <name>UnsignedShort</name>
-            <size>16</size>
-            <interpretation>Integer in the range [0, 2^16 - 1]</interpretation>
-            <endian>Big</endian>
-            <encoding>16-bit unsigned integer.</encoding>
-         </basicData>
-      </basicDataRepresentations>
-      <simpleDataTypes>
-         <simpleData>
-            <name>VerfierIntegerTime</name>
-            <representation>HLAinteger64BE</representation>
-            <units>NA</units>
-            <resolution>1</resolution>
-            <accuracy>NA</accuracy>
-            <semantics>Time and time intervals</semantics>
-         </simpleData>
-      </simpleDataTypes>
-      <enumeratedDataTypes/>
-      <arrayDataTypes/>
-      <fixedRecordDataTypes/>
-      <variantRecordDataTypes/>
-   </dataTypes>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<objectModel xsi:schemaLocation="http://standards.ieee.org/IEEE1516-2010 http://standards.ieee.org/downloads/1516/1516.2-2010/IEEE1516-DIF-2010.xsd" xmlns="http://standards.ieee.org/IEEE1516-2010" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelIdentification>
+        <name>HLADemo.xml</name>
+        <type>FOM</type>
+        <version>1.0</version>
+        <modificationDate>2001-05-21</modificationDate>
+        <securityClassification>Undefined</securityClassification>
+        <purpose>DDM and MOM stuffs are added.</purpose>
+        <applicationDomain>HLA RTI Verification</applicationDomain>
+        <description>Undefined</description>
+        <useLimitation/>
+        <poc>
+            <pocType>Primary author</pocType>
+            <pocName>Susan Symington</pocName>
+            <pocOrg>MITRE W150</pocOrg>
+            <pocTelephone>+1 703-883-7209</pocTelephone>
+            <pocEmail>susan@mitre.org</pocEmail>
+        </poc>
+        <poc>
+            <pocType>Sponsor</pocType>
+            <pocName>DMSO</pocName>
+        </poc>
+        <reference>
+            <type>Text</type>
+            <identification>http://www.dmso.mil/index.php?page=72</identification>
+        </reference>
+        <reference>
+            <type>HLA Evolved Conversion Tool</type>
+            <identification>Pitch Visual OMT 1516 v1.5.1</identification>
+        </reference>
+        <reference>
+            <type>Converted From</type>
+            <identification>HLADemo.xml</identification>
+        </reference>
+        <other/>
+    </modelIdentification>
+    <objects>
+        <objectClass>
+            <name>HLAobjectRoot</name>
+            <objectClass>
+                <name>CruiseMissile</name>
+                <sharing>Neither</sharing>
+                <semantics>Cruise Missile</semantics>
+                <attribute>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics>Position of Cruise Missile</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>Early_warningRadar</name>
+                <sharing>Neither</sharing>
+                <semantics>Early Warning Radar</semantics>
+                <attribute>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics>Position of Early Warning Radar</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>MissionDistribution</name>
+                <sharing>Neither</sharing>
+                <semantics>Mission Distribution</semantics>
+                <attribute>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics>Result of Mission Distribution</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>Anti_aircraftMissile</name>
+                <sharing>Neither</sharing>
+                <semantics>Anti Aircraft Missile</semantics>
+                <attribute>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics>Position of Anti Aircraft Missile</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>RoutePlanning</name>
+                <sharing>Neither</sharing>
+                <semantics>Route Planning</semantics>
+                <attribute>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics>Route</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>TrackingRadar</name>
+                <sharing>Neither</sharing>
+                <semantics>Tracking Radar</semantics>
+                <attribute>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics>Position of Tracking Radar</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>Participant</name>
+                <sharing>Neither</sharing>
+                <semantics>Default</semantics>
+                <attribute>
+                    <name>Name</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>TimeStamp</order>
+                    <semantics></semantics>
+                </attribute>
+            </objectClass>
+        </objectClass>
+    </objects>
+    <interactions>
+        <interactionClass>
+            <name>HLAinteractionRoot</name>
+            <interactionClass>
+                <name>CruiseMissile</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Cruise Missile</semantics>
+                <parameter>
+                    <name>Status</name>
+                    <dataType>HLAinteger16LE</dataType>
+                    <semantics>Status of cruise missile</semantics>
+                </parameter>
+                <parameter>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>Position of cruise missile</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>Early_warningRadar</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Early Warning Radar</semantics>
+                <parameter>
+                    <name>Status</name>
+                    <dataType>HLAinteger16LE</dataType>
+                    <semantics>Status of early warning radar missile</semantics>
+                </parameter>
+                <parameter>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>Position of cruise missile</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>MissionDistribution</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Mission Distribution</semantics>
+                <parameter>
+                    <name>Strategy</name>
+                    <dataType>HLAvariableArray</dataType>
+                    <semantics>Strategy of mission distribution</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>Anti_aircraftMissile</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Anti Aircraft Missile</semantics>
+                <parameter>
+                    <name>Status</name>
+                    <dataType>HLAinteger16LE</dataType>
+                    <semantics>Status of anti aircraft missile</semantics>
+                </parameter>
+                <parameter>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>Position of anti aircraft missile</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>RoutePlanning</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Route Planning</semantics>
+                <parameter>
+                    <name>Route</name>
+                    <dataType>HLAvariableArray</dataType>
+                    <semantics>Route</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>TrackingRadar</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Tracking Radar</semantics>
+                <parameter>
+                    <name>Status</name>
+                    <dataType>HLAinteger16LE</dataType>
+                    <semantics>Status of tracking radar</semantics>
+                </parameter>
+                <parameter>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>Position of anti aircraft missile</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>Communication</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Communication</semantics>
+                <parameter>
+                    <name>Message</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>Contents of message</semantics>
+                </parameter>
+                <parameter>
+                    <name>Sender</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>The name of the person that sent the message.</semantics>
+                </parameter>
+            </interactionClass>
+        </interactionClass>
+    </interactions>
+    <dimensions/>
+    <time>
+        <timeStamp>
+            <dataType>VerifierIntegerTime</dataType>
+            <semantics></semantics>
+        </timeStamp>
+        <lookahead>
+            <dataType>VerifierIntegerTime</dataType>
+            <semantics></semantics>
+        </lookahead>
+    </time>
+    <tags>
+        <updateReflectTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </updateReflectTag>
+        <sendReceiveTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </sendReceiveTag>
+        <deleteRemoveTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </deleteRemoveTag>
+        <divestitureRequestTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </divestitureRequestTag>
+        <divestitureCompletionTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </divestitureCompletionTag>
+        <acquisitionRequestTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </acquisitionRequestTag>
+        <requestUpdateTag>
+            <dataType>NA</dataType>
+            <semantics>NA</semantics>
+        </requestUpdateTag>
+    </tags>
+    <synchronizations>
+        <synchronizationPoint>
+            <label>First</label>
+            <dataType>NA</dataType>
+            <capability>NA</capability>
+        </synchronizationPoint>
+        <synchronizationPoint>
+            <label>Second</label>
+            <dataType>NA</dataType>
+            <capability>NA</capability>
+        </synchronizationPoint>
+    </synchronizations>
+    <transportations/>
+    <switches>
+        <autoProvide isEnabled="false"/>
+        <conveyRegionDesignatorSets isEnabled="false"/>
+        <conveyProducingFederate isEnabled="false"/>
+        <attributeScopeAdvisory isEnabled="false"/>
+        <attributeRelevanceAdvisory isEnabled="false"/>
+        <objectClassRelevanceAdvisory isEnabled="false"/>
+        <interactionRelevanceAdvisory isEnabled="false"/>
+        <serviceReporting isEnabled="false"/>
+        <exceptionReporting isEnabled="false"/>
+        <delaySubscriptionEvaluation isEnabled="false"/>
+        <automaticResignAction resignAction="CancelThenDeleteThenDivest"/>
+    </switches>
+    <dataTypes>
+        <basicDataRepresentations>
+            <basicData>
+                <name>UnsignedShort</name>
+                <size>16</size>
+                <interpretation>Integer in the range [0, 2^16 - 1]</interpretation>
+                <endian>Big</endian>
+                <encoding>16-bit unsigned integer.</encoding>
+            </basicData>
+        </basicDataRepresentations>
+        <simpleDataTypes>
+            <simpleData>
+                <name>VerfierIntegerTime</name>
+                <representation>HLAinteger64BE</representation>
+                <units>NA</units>
+                <resolution>1</resolution>
+                <accuracy>NA</accuracy>
+                <semantics>Time and time intervals</semantics>
+            </simpleData>
+        </simpleDataTypes>
+        <enumeratedDataTypes/>
+        <arrayDataTypes/>
+        <fixedRecordDataTypes/>
+        <variantRecordDataTypes/>
+    </dataTypes>
 </objectModel>

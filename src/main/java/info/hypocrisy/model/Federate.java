@@ -1,11 +1,11 @@
 package info.hypocrisy.model;
 
-import com.sun.management.MissionControl;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.*;
 import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
+import se.pitch.prti1516e.handles.AttributeHandleValueMapImpl;
 import se.pitch.prti1516e.time.HLAfloat64IntervalImpl;
 import se.pitch.prti1516e.time.HLAfloat64TimeImpl;
 
@@ -69,9 +69,9 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     private volatile boolean reservationSucceeded;
     private final Object reservationSemaphore = new Object();
 
-    private final Map<ObjectInstanceHandle, Participant> knownObjects = new HashMap<ObjectInstanceHandle, Participant>();
+    private final Map<ObjectInstanceHandle, Participant> knownObjects = new HashMap<>();
     /**********************
-     * Sync variables.
+     * Sync points variables.
      **********************/
     private final String SYNC_POINT = "ReadyToRun";
     private volatile boolean isRegisterSyncPointSucceeded = false;
@@ -248,6 +248,18 @@ public class Federate extends NullFederateAmbassador implements Runnable {
         }
         try {
             /**********************
+             * Subscribe and publish objects
+             **********************/
+            ObjectClassHandle participantId = rtiAmbassador.getObjectClassHandle("Participant");
+            attributeIdName = rtiAmbassador.getAttributeHandle(participantId, "Name");
+
+            AttributeHandleSet attributeSet = rtiAmbassador.getAttributeHandleSetFactory().create();
+            attributeSet.add(attributeIdName);
+
+            rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
+            rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
+
+            /**********************
              * Subscribe and publish interactions
              **********************/
             cruiseMissile = rtiAmbassador.getInteractionClassHandle("CruiseMissile");
@@ -305,18 +317,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
 
             /**********************
-             * Subscribe and publish objects
-             **********************/
-            ObjectClassHandle participantId = rtiAmbassador.getObjectClassHandle("Participant");
-            attributeIdName = rtiAmbassador.getAttributeHandle(participantId, "Name");
-
-            AttributeHandleSet attributeSet = rtiAmbassador.getAttributeHandleSetFactory().create();
-            attributeSet.add(attributeIdName);
-
-            rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
-            rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
-
-            /**********************
              * Reserve object instance name and register object instance
              **********************/
             do {
@@ -347,6 +347,9 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                 }
             } while (!reservationSucceeded);
             userId = rtiAmbassador.registerObjectInstance(participantId, username);
+            AttributeHandleValueMap attributeHandleValueMap = new AttributeHandleValueMapImpl();
+            attributeHandleValueMap.put(attributeIdName,encoderFactory.createHLAunicodeString("0").toByteArray());
+            rtiAmbassador.updateAttributeValues(userId,attributeHandleValueMap,null);
 
             /**********************
              * Register Synchronization Point
@@ -485,11 +488,27 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     @Override
     public void run() {
         try {
+            /**********************
+             * Send interaction and update attributes for every 1 second.
+             * Send interaction may be into failure because of time management,
+             * but attributes update should success for every iteration for its independence of time management.
+             **********************/
             while(state) {
                 Thread.sleep(1000);
 
-                ParameterHandleValueMap parameters = setParameters();
+                // Should be optimized, we can create a new variable to store object instance handle so no set is needed.
+                Set<Map.Entry<ObjectInstanceHandle,Participant>> objectsSet = knownObjects.entrySet();
+                Iterator<Map.Entry<ObjectInstanceHandle,Participant>> iterObjects = objectsSet.iterator();
+                Integer i = 0;
+                while(iterObjects.hasNext()) {
+                    Map.Entry<ObjectInstanceHandle,Participant> entry = iterObjects.next();
+                    AttributeHandleValueMap attributeHandleValueMap = new AttributeHandleValueMapImpl();
+                    i++;
+                    attributeHandleValueMap.put(attributeIdName,encoderFactory.createHLAunicodeString(i.toString()).toByteArray());
+                    rtiAmbassador.updateAttributeValues(entry.getKey(),attributeHandleValueMap,null);
+                }
 
+                ParameterHandleValueMap parameters = setParameters();
                 if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 0) {
                     //rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()],parameters,null);
                     try {
@@ -919,6 +938,8 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                     System.out.println("Failed to decode incoming attribute");
                 }
             }
+        } else {
+            System.out.println("miao~");
         }
     }
 
@@ -931,7 +952,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                 AttributeHandleValueMap attributeValues = rtiAmbassador.getAttributeHandleValueMapFactory().create(1);
                 HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
                 attributeValues.put(attributeIdName, nameEncoder.toByteArray());
-                rtiAmbassador.updateAttributeValues(userId, attributeValues, null);
+                //rtiAmbassador.updateAttributeValues(userId, attributeValues, null);
             } catch (RTIexception ignored) {
             }
         }
