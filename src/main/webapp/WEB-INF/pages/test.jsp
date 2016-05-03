@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="assets/stylesheets/bootstrap.css">
 </head>
 <body ng-app="HLADemo">
-  <h2 class="text-center">Test Spring MVC</h2>
+  <h2 class="text-center">Test Some Functions</h2>
 
 </body>
 </html>

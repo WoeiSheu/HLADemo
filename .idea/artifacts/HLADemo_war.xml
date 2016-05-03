@@ -1,8 +1,8 @@
 <component name="ArtifactManager">
-  <artifact type="war" name="SpringMVCDemo:war">
+  <artifact type="war" name="HLADemo:war">
     <output-path>$PROJECT_DIR$/target</output-path>
     <root id="archive" name="hecate.war">
-      <element id="artifact" artifact-name="SpringMVCDemo:war exploded" />
+      <element id="artifact" artifact-name="HLADemo:war exploded" />
       <element id="directory" name="WEB-INF">
         <element id="directory" name="lib">
           <element id="library" level="project" name="prticore" />

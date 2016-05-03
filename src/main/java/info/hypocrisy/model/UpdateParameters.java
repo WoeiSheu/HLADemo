@@ -6,11 +6,15 @@ package info.hypocrisy.model;
  **********************/
 public class UpdateParameters {
     private String strategy;
+    private String mechanism;
     private String step;
     private String lookahead;
 
     public String getStrategy() {
         return strategy;
+    }
+    public String getMechanism() {
+        return mechanism;
     }
     public String getStep() {
         return step;
@@ -21,6 +25,9 @@ public class UpdateParameters {
 
     public void setStrategy(String strategy) {
         this.strategy = strategy;
+    }
+    public void setMechanism(String mechanism) {
+        this.mechanism = mechanism;
     }
     public void setStep(String step) {
         this.step = step;

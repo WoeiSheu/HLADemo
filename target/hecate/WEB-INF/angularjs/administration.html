@@ -1,51 +1,45 @@
-<div class="row container-fluid">
-    <div class="col-xs-1">
-
+<div>
+    <div class="pull-right">
+        <button class="btn" href aria-hidden="true" data-toggle="modal" data-target="#createFederate" style="background-color:#000000;color:#ff8800">Create a Federate</button>
     </div>
-    <div class="col-xs-10">
-        <div class="pull-right">
-            <button class="btn" href aria-hidden="true" data-toggle="modal" data-target="#createFederate" style="background-color:#000000;color:#ff8800">Create a Federate</button>
-        </div>
-        <create-federate></create-federate>
-        <edit-federate></edit-federate>
+    <create-federate></create-federate>
+    <edit-federate></edit-federate>
 
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th class="col-xs-1">Name</th>
-                    <th class="col-xs-1">Federation</th>
-                    <th class="col-xs-2">FOM</th>
-                    <th class="col-xs-3">Strategy</th>
-                    <th class="col-xs-1">Time</th>
-                    <th class="col-xs-1"></th>
-                    <th class="col-xs-2"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr ng-repeat="federate in federates">
-                    <td>{{federate.name}}</td>
-                    <td>{{federate.federation}}</td>
-                    <td><a ng-href="{{federate.fomUrl}}">{{federate.fom}}</a></td>
-                    <td>{{federate.strategy}}</td>
-                    <td>{{federate.time}}</td>
-                    <td>
-                        <span class="glyphicon glyphicon-edit" style="color:green"></span>
-                        <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:green" aria-hidden="true" data-toggle="modal" data-target="#editFederate" ng-click="edit(federate)">Edit</button>
-                    </td>
-                    <td>
-                        <span class="glyphicon glyphicon-play" style="color:blue" ng-show="federate.startOrPause == 'Start'"></span>
-                        <span class="glyphicon glyphicon-pause" style="color:red" ng-show="federate.startOrPause == 'Pause'"></span>
-                        <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:blue" ng-click="run(federate)">{{federate.startOrPause}}</button>
-                        | <span class="glyphicon glyphicon-trash" style="color:#a94442"></span>
-                        <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:#a94442" ng-click="delete(federate)">Delete</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="col-xs-1">
-
-    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th class="col-xs-1">Name</th>
+                <th class="col-xs-1">Federation</th>
+                <th class="col-xs-1">FOM</th>
+                <th class="col-xs-2">Type</th>
+                <th class="col-xs-3">Strategy</th>
+                <th class="col-xs-1">Time</th>
+                <th class="col-xs-1"></th>
+                <th class="col-xs-2"></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="federate in federates">
+                <td>{{federate.name}}</td>
+                <td>{{federate.federation}}</td>
+                <td><a ng-href="{{federate.fomUrl}}" target="_blank">{{federate.fom}}</a></td>
+                <td>{{federate.type}}</td>
+                <td>{{federate.strategy}}</td>
+                <td>{{federate.time}}</td>
+                <td>
+                    <span class="glyphicon glyphicon-edit" style="color:green"></span>
+                    <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:green" aria-hidden="true" data-toggle="modal" data-target="#editFederate" ng-click="edit(federate)">Edit</button>
+                </td>
+                <td>
+                    <span class="glyphicon glyphicon-play" style="color:blue" ng-show="federate.startOrPause == 'Start'"></span>
+                    <span class="glyphicon glyphicon-pause" style="color:red" ng-show="federate.startOrPause == 'Pause'"></span>
+                    <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:blue" ng-click="run(federate)">{{federate.startOrPause}}</button>
+                    | <span class="glyphicon glyphicon-trash" style="color:#a94442"></span>
+                    <button class="btn btn-sm" style="position:relative;top:-1px;padding:0;background:transparent;color:#a94442" ng-click="delete(federate)">Delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 
 <input type="file" id="fileToUpload" name="fileToUpload" onchange="angular.element(this).scope().upload(this.files)" class="hide"/>

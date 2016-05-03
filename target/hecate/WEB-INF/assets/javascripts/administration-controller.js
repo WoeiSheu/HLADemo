@@ -2,18 +2,27 @@
  * Created by Hypocrisy on 3/24/2016.
  * This controller manage the federates.
  */
-angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', 'passDataService', function($http, $scope, $interval, passDataService) {
+angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', 'passDataService', 'sortFederate', function($http, $scope, $interval, passDataService, sortFederate) {
     var ctrl = this;
-    $scope.request = {"crcAddress":"192.168.1.105", "federationName": "Gaea", "federateName": "", "fomUrl": "http://localhost:8080/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+
+    var host = window.location.protocol + "//" + window.location.host;
+    $scope.request = {"crcAddress":"192.168.1.105", "isPhysicalDevice":"No", "type":"Cruise Missile", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.availableTypes = ["Cruise Missile","Early-warning Radar","Mission Distribution","Anti-aircraft Missile","Route Planning","Tracking Radar"];
+    $scope.availableMechanisms = ["Time Stepped", "Event Driven"];
+    $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
-            console.log(data);
+            if(data.status != "Success") {
+                alert(data.status);
+                return;
+            }
             $("#createFederate").modal('hide');
-            //ctrl.updateFederates();
             var federate = {
                 "name": $scope.request.federateName,
                 "federation": $scope.request.federationName,
+                "type": $scope.request.type,
+                "mechanism": $scope.request.mechanism,
                 "fomUrl": $scope.request.fomUrl,
                 "fom": $scope.request.fomUrl.split('/').pop(),
                 "strategy": $scope.request.strategy,
@@ -23,6 +32,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                 "startOrPause": "Start"
             };
             $scope.federates.push(federate);
+            $scope.federates.sort(sortFederate.compareFederate('type','name'));
         });
     };
 
@@ -34,6 +44,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
         //ctrl.backup_federate = $.extend(true, {}, federate);
         $scope.updateInfo = {
             "strategy": federate.strategy,
+            "mechanism": isNaN(federate.mechanism) ? federate.mechanism : $scope.availableMechanisms[federate.mechanism],
             "step": federate.step,
             "lookahead": federate.lookahead
         };
@@ -41,6 +52,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.update = function (federate) {
         $http({method: "PUT", url: "/federates/update/" + federate.federation + "/" + federate.name, data: $scope.updateInfo}).success(function (data) {
             ctrl.federate.strategy = $scope.updateInfo.strategy;
+            ctrl.federate.mechanism = $scope.updateInfo.mechanism;
             ctrl.federate.step = $scope.updateInfo.step;
             ctrl.federate.lookahead = $scope.updateInfo.lookahead;
         });
@@ -85,11 +97,9 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
         $http({method: "POST", url: url, headers: {'Content-Type': undefined}, transformRequest: angular.identity, data: fd}).success(function (data) {
             //console.log(data);
-            $scope.request.fomUrl = data.url;
+            $scope.request.fomUrl = host + '/assets/config/' + data;
         });
     };
-
-    $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
     /**********************
      * Init or reset federates.
@@ -103,6 +113,8 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                     var item = {
                         "name": federate,
                         "federation": federation,
+                        "type": $scope.availableTypes[federates[federate].type],
+                        "mechanism": federates[federate].mechanism,
                         "fomUrl": federates[federate].fomUrl,
                         "fom": federates[federate].fomName,
                         "strategy": federates[federate].strategy,
@@ -114,6 +126,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                     $scope.federates.push(item);
                 }
             }
+            $scope.federates.sort(sortFederate.compareFederate('type','name'));
         });
     };
     this.initFederates();

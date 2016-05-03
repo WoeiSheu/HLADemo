@@ -1,11 +1,10 @@
 package info.hypocrisy.controller;
 
-import com.google.gson.Gson;
-import info.hypocrisy.model.Federate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Hypocrisy on 3/24/2016.
@@ -13,19 +12,23 @@ import org.springframework.web.bind.annotation.ResponseBody;
  */
 
 @Controller
-@RequestMapping("/test")
 public class TestController {
-    @RequestMapping(method = RequestMethod.GET)
+    //Map<String,Map<String,Federate>> mapFederation = new HashMap<>();
+
+    @RequestMapping(value = "/test", method = RequestMethod.GET)
     public String index(){
         return "test";
     }
 
-    @RequestMapping(method = RequestMethod.POST)
+    @RequestMapping(value = "/test/federate", method = RequestMethod.POST)
     @ResponseBody
     public String create(){
-        Federate federate = new Federate();
-        federate.createAndJoin();
-        federate.test();
+        return "{\"status\":\"Success\"}";
+    }
+
+    @RequestMapping(value = "/test/{federationName}/{federateName}", method = RequestMethod.GET)
+    @ResponseBody
+    public String run(@PathVariable String federationName, @PathVariable String federateName) {
         return "{\"status\":\"Success\"}";
     }
 }

@@ -135,4 +135,14 @@
   <build>
     <finalName>hecate</finalName>
   </build>
+
+  <developers>
+    <developer>
+      <email>xuweiiam@gmail.com</email>
+      <name>Hypocrisy Hermes</name>
+      <url>https://github.com/hecate-xw</url>
+      <id>hecate-xw</id>
+    </developer>
+  </developers>
+  <description>HLA Demo for Dissertation</description>
 </project>
