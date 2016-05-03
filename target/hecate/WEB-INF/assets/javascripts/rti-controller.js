@@ -1,7 +1,7 @@
 /**
  * Created by Hypocrisy on 3/24/2016.
  */
-angular.module('HLADemo').controller('RTIController', ['$http', '$scope', '$location', function($http, $scope, $location) {
+angular.module('HLADemo').controller('RTIController', ['$http', '$scope', '$location', 'sortFederate', function($http, $scope, $location, sortFederate) {
     var ctrl = this;
 
     var drawRTI = function(x,y,width,height,text) {
@@ -52,7 +52,6 @@ angular.module('HLADemo').controller('RTIController', ['$http', '$scope', '$loca
     var context = document.getElementById('rtiView').getContext('2d');
 
     $http({method: 'GET', url: '/federates'}).success(function(data) {
-        //console.log(data);
         ctrl.federatesWithAttributes = data;
         var canvasHeight = perRtiHeight*Object.keys(data).length;
         $('#rtiView').attr('height', canvasHeight);

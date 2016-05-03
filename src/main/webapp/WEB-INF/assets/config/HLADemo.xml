@@ -43,15 +43,15 @@
                 <sharing>Neither</sharing>
                 <semantics>Cruise Missile</semantics>
                 <attribute>
-                    <name>Position</name>
+                    <name>ID</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
-                    <semantics>Position of Cruise Missile</semantics>
+                    <order>Receive</order>
+                    <semantics>ID of Cruise Missile</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -59,15 +59,15 @@
                 <sharing>Neither</sharing>
                 <semantics>Early Warning Radar</semantics>
                 <attribute>
-                    <name>Position</name>
+                    <name>ID</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
-                    <semantics>Position of Early Warning Radar</semantics>
+                    <order>Receive</order>
+                    <semantics>ID of Early Warning Radar</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -75,15 +75,15 @@
                 <sharing>Neither</sharing>
                 <semantics>Mission Distribution</semantics>
                 <attribute>
-                    <name>Position</name>
+                    <name>ID</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
-                    <semantics>Result of Mission Distribution</semantics>
+                    <order>Receive</order>
+                    <semantics>ID of Mission Distribution</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -91,15 +91,15 @@
                 <sharing>Neither</sharing>
                 <semantics>Anti Aircraft Missile</semantics>
                 <attribute>
-                    <name>Position</name>
+                    <name>ID</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
-                    <semantics>Position of Anti Aircraft Missile</semantics>
+                    <order>Receive</order>
+                    <semantics>ID of Anti Aircraft Missile</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -107,15 +107,15 @@
                 <sharing>Neither</sharing>
                 <semantics>Route Planning</semantics>
                 <attribute>
-                    <name>Position</name>
+                    <name>ID</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
-                    <semantics>Route</semantics>
+                    <order>Receive</order>
+                    <semantics>ID of Route Planning</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -123,15 +123,15 @@
                 <sharing>Neither</sharing>
                 <semantics>Tracking Radar</semantics>
                 <attribute>
-                    <name>Position</name>
+                    <name>ID</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
-                    <semantics>Position of Tracking Radar</semantics>
+                    <order>Receive</order>
+                    <semantics>ID of Tracking Radar</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -146,7 +146,7 @@
                     <ownership>DivestAcquire</ownership>
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
-                    <order>TimeStamp</order>
+                    <order>Receive</order>
                     <semantics></semantics>
                 </attribute>
             </objectClass>

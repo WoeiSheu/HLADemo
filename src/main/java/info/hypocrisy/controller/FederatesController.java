@@ -73,13 +73,19 @@ public class FederatesController {
                 return "{\"status\":\"Have created before.\"}";
             } else {
                 Federate federate = new Federate(federateParameters);
-                federate.createAndJoin();
+                String status = federate.createAndJoin();
+                if(!"Success".equals(status)) {
+                    return "{\"status\":\"" + status + "\"}";
+                }
                 mapFederate.put(federateName,federate);
             }
         } else {
             Map<String,Federate> mapFederate = new HashMap<>();
             Federate federate = new Federate(federateParameters);
-            federate.createAndJoin();
+            String status = federate.createAndJoin();
+            if(!"Success".equals(status)) {
+                return "{\"status\":\"" + status + "\"}";
+            }
             mapFederate.put(federateName,federate);
             mapFederation.put(federationName,mapFederate);
         }

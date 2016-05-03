@@ -2,7 +2,7 @@
  * Created by Hypocrisy on 3/24/2016.
  * This controller manage the federates.
  */
-angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', 'passDataService', function($http, $scope, $interval, passDataService) {
+angular.module('HLADemo').controller('AdministrationController', ['$http', '$scope', '$interval', 'passDataService', 'sortFederate', function($http, $scope, $interval, passDataService, sortFederate) {
     var ctrl = this;
 
     var host = window.location.protocol + "//" + window.location.host;
@@ -13,8 +13,11 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
     $scope.create = function() {
         $http({method: "POST", url: "/federates", data: JSON.stringify($scope.request)}).success(function(data) {
-            console.log(data);
-            //ctrl.updateFederates();
+            if(data.status != "Success") {
+                alert(data.status);
+                return;
+            }
+            $("#createFederate").modal('hide');
             var federate = {
                 "name": $scope.request.federateName,
                 "federation": $scope.request.federationName,
@@ -29,7 +32,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                 "startOrPause": "Start"
             };
             $scope.federates.push(federate);
-            $("#createFederate").modal('hide');
+            $scope.federates.sort(sortFederate.compareFederate('type','name'));
         });
     };
 
@@ -41,6 +44,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
         //ctrl.backup_federate = $.extend(true, {}, federate);
         $scope.updateInfo = {
             "strategy": federate.strategy,
+            "mechanism": isNaN(federate.mechanism) ? federate.mechanism : $scope.availableMechanisms[federate.mechanism],
             "step": federate.step,
             "lookahead": federate.lookahead
         };
@@ -48,6 +52,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     $scope.update = function (federate) {
         $http({method: "PUT", url: "/federates/update/" + federate.federation + "/" + federate.name, data: $scope.updateInfo}).success(function (data) {
             ctrl.federate.strategy = $scope.updateInfo.strategy;
+            ctrl.federate.mechanism = $scope.updateInfo.mechanism;
             ctrl.federate.step = $scope.updateInfo.step;
             ctrl.federate.lookahead = $scope.updateInfo.lookahead;
         });
@@ -121,6 +126,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                     $scope.federates.push(item);
                 }
             }
+            $scope.federates.sort(sortFederate.compareFederate('type','name'));
         });
     };
     this.initFederates();

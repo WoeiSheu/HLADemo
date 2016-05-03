@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SpringMVCDemo.iml" filepath="$PROJECT_DIR$/SpringMVCDemo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/HLADemo.iml" filepath="$PROJECT_DIR$/HLADemo.iml" />
     </modules>
   </component>
 </project>

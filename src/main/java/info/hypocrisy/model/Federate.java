@@ -38,38 +38,33 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     /**********************
      * All interaction class handle and their parameters' handle
      **********************/
-    private InteractionClassHandle cruiseMissile;
     private ParameterHandle cruiseMissileStatus;
     private ParameterHandle cruiseMissilePosition;
-    private InteractionClassHandle early_warningRadar;
     private ParameterHandle early_warningRadarStatus;
     private ParameterHandle early_warningRadarPosition;
-    private InteractionClassHandle missionDistribution;
     private ParameterHandle strategyOfMissionDistribution;
-    private InteractionClassHandle anti_aircraftMissile;
     private ParameterHandle anti_aircraftStatus;
     private ParameterHandle anti_aircraftMissilePosition;
-    private InteractionClassHandle routePlanning;
     private ParameterHandle route;
-    private InteractionClassHandle trackingRadar;
     private ParameterHandle trackingRadarStatus;
     private ParameterHandle trackingRadarPosition;
-    private InteractionClassHandle messageId;
-    private ParameterHandle parameterIdText;
-    private ParameterHandle parameterIdSender;
+    private ParameterHandle communicationMessage;
+    private ParameterHandle communicationSender;
+
     private InteractionClassHandle[] interactionClasses;
+    private Map<InteractionClassHandle,List<ParameterHandle>> mapInteractionParameters = new HashMap<>();
     /**********************
      * All object instance handle and their attributes' handle
      **********************/
+    private ObjectClassHandle[] objectClassHandles;
+    private Map<ObjectClassHandle,List<AttributeHandle>> mapObjectAttributes = new HashMap<>();
     private ObjectInstanceHandle userId;
-    private AttributeHandle attributeIdName;
-    private String username;
 
+    private String name;
     private volatile boolean reservationComplete;
     private volatile boolean reservationSucceeded;
     private final Object reservationSemaphore = new Object();
 
-    private final Map<ObjectInstanceHandle, Participant> knownObjects = new HashMap<>();
     /**********************
      * Sync points variables.
      **********************/
@@ -100,24 +95,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     }
 
     /**********************
-     * Participant for object instance.
-     **********************/
-    private static class Participant {
-        private final String name;
-
-        Participant(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public String toString()
-        {
-            return name;
-        }
-    }
-
-    /**********************
      * Constructor
      **********************/
     private FederateAttributes federateAttributes;
@@ -131,40 +108,12 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             this.setIsPhysicalDevice(true);
         }
 
-        switch (federateParameters.getType()) {
-            case "Cruise Missile":
-                federateAttributes.setType(0);
-                break;
-            case "Early-warning Radar":
-                federateAttributes.setType(1);
-                break;
-            case "Mission Distribution":
-                federateAttributes.setType(2);
-                break;
-            case "Anti-aircraft Missile":
-                federateAttributes.setType(3);
-                break;
-            case "Route Planning":
-                federateAttributes.setType(4);
-                break;
-            case "Tracking Radar":
-                federateAttributes.setType(5);
-                break;
-            default:
-                federateAttributes.setType(6);
-        }
+        federateAttributes.setType(federateParameters.getType());
 
         String[] tmp = federateParameters.getFomUrl().split("/");
         federateAttributes.setFomName(tmp[tmp.length - 1]);
 
-        if( "Time Stepped".equals(federateParameters.getMechanism()) ) {
-            federateAttributes.setMechanism(0);
-        } else if( "Event Driven".equals(federateParameters.getMechanism()) ) {
-            federateAttributes.setMechanism(1);
-        } else {
-            federateAttributes.setMechanism(2);
-        }
-
+        federateAttributes.setMechanism(federateParameters.getMechanism());
         federateAttributes.setFomUrl(federateParameters.getFomUrl());
         federateAttributes.setStrategy(federateParameters.getStrategy());
         federateAttributes.setStep(federateParameters.getStep());
@@ -183,7 +132,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
         return currentTime.getValue();
     }
 
-    public void createAndJoin() {
+    public String createAndJoin() {
         try {
             /**********************
              * get Rti ambassador and connect with it.
@@ -193,20 +142,22 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                 rtiAmbassador = rtiFactory.getRtiAmbassador();
                 encoderFactory = rtiFactory.getEncoderFactory();
             } catch (Exception e) {
-                System.out.println("Unable to create RTI ambassador.");
-                return;
+                return "Unable to create RTI ambassador.";
             }
             String crcAddress = federateAttributes.getCrcAddress();
             String settingsDesignator = "crcAddress=" + crcAddress;
-            rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
+            try {
+                rtiAmbassador.connect(this, CallbackModel.HLA_IMMEDIATE, settingsDesignator);
+            } catch (RTIexception e) {
+                return "Wrong CRC Address";
+            }
 
             /**********************
              * Clean up old federation
              **********************/
             try {
                 rtiAmbassador.destroyFederationExecution(federateAttributes.getFederation());
-            } catch (FederatesCurrentlyJoined ignored) {
-            } catch (FederationExecutionDoesNotExist ignored) {
+            } catch (FederatesCurrentlyJoined | FederationExecutionDoesNotExist ignored) {
             }
 
             /**********************
@@ -217,19 +168,23 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             try {
                 rtiAmbassador.createFederationExecution(federateAttributes.getFederation(), new URL[]{url}, "HLAfloat64Time");
             } catch (FederationExecutionAlreadyExists ignored) {
+            } catch (InconsistentFDD | ErrorReadingFDD | CouldNotOpenFDD e) {
+                return "Wrong FOM File";
             }
 
             /**********************
              * Join current federate(specified with this) into current federation(specified with rtiAmbassador)
              **********************/
-            rtiAmbassador.joinFederationExecution(federateAttributes.getName(), federateAttributes.getFederation(), new URL[]{url});
-
+            try {
+                rtiAmbassador.joinFederationExecution(federateAttributes.getName(), federateAttributes.getTypeName(), federateAttributes.getFederation(), new URL[]{url});
+            } catch (FederateNameAlreadyInUse e) {
+                return "Federate name has been already in use.";
+            }
             /**********************
              * Add by Hypocrisy on 03/28/2015
              * Time Management Variables.
              **********************/
             HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getLookahead()) );
-            //rtiAmbassador->enableAsynchronousDelivery();
             if ("Regulating".equals(federateAttributes.getStrategy())) {
                 rtiAmbassador.enableTimeRegulation(lookahead);
             } else if ("Constrained".equals(federateAttributes.getStrategy())) {
@@ -244,88 +199,28 @@ public class Federate extends NullFederateAmbassador implements Runnable {
 
             rtiAmbassador.enableCallbacks();
         } catch (Exception e) {
-            System.out.println("Unable to join");
+            return "Unable to join";
         }
         try {
             /**********************
              * Subscribe and publish objects
              **********************/
-            ObjectClassHandle participantId = rtiAmbassador.getObjectClassHandle("Participant");
-            attributeIdName = rtiAmbassador.getAttributeHandle(participantId, "Name");
-
-            AttributeHandleSet attributeSet = rtiAmbassador.getAttributeHandleSetFactory().create();
-            attributeSet.add(attributeIdName);
-
-            rtiAmbassador.subscribeObjectClassAttributes(participantId, attributeSet);
-            rtiAmbassador.publishObjectClassAttributes(participantId, attributeSet);
-
+            subscribeAndPublishObjects();
             /**********************
              * Subscribe and publish interactions
              **********************/
-            cruiseMissile = rtiAmbassador.getInteractionClassHandle("CruiseMissile");
-            cruiseMissileStatus = rtiAmbassador.getParameterHandle(cruiseMissile,"Status");
-            cruiseMissilePosition = rtiAmbassador.getParameterHandle(cruiseMissile,"Position");
-            early_warningRadar = rtiAmbassador.getInteractionClassHandle("Early_warningRadar");
-            early_warningRadarStatus = rtiAmbassador.getParameterHandle(early_warningRadar,"Status");
-            early_warningRadarPosition = rtiAmbassador.getParameterHandle(early_warningRadar,"Position");
-            missionDistribution = rtiAmbassador.getInteractionClassHandle("MissionDistribution");
-            strategyOfMissionDistribution = rtiAmbassador.getParameterHandle(missionDistribution,"Strategy");
-            anti_aircraftMissile = rtiAmbassador.getInteractionClassHandle("Anti_aircraftMissile");
-            anti_aircraftStatus = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Status");
-            anti_aircraftMissilePosition = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Position");
-            routePlanning = rtiAmbassador.getInteractionClassHandle("RoutePlanning");
-            route = rtiAmbassador.getParameterHandle(routePlanning,"Route");
-            trackingRadar = rtiAmbassador.getInteractionClassHandle("TrackingRadar");
-            trackingRadarStatus = rtiAmbassador.getParameterHandle(trackingRadar,"Status");
-            trackingRadarPosition = rtiAmbassador.getParameterHandle(trackingRadar,"Position");
-            messageId = rtiAmbassador.getInteractionClassHandle("Communication");
-            parameterIdText = rtiAmbassador.getParameterHandle(messageId, "Message");
-            parameterIdSender = rtiAmbassador.getParameterHandle(messageId, "Sender");
-
-            interactionClasses = new InteractionClassHandle[]{cruiseMissile,early_warningRadar,missionDistribution,anti_aircraftMissile,routePlanning,trackingRadar,messageId};
-            switch (federateAttributes.getType()) {
-                case 0:
-                    rtiAmbassador.publishInteractionClass(cruiseMissile);
-                    break;
-                case 1:
-                    rtiAmbassador.publishInteractionClass(early_warningRadar);
-                    rtiAmbassador.subscribeInteractionClass(cruiseMissile);
-                    break;
-                case 2:
-                    rtiAmbassador.publishInteractionClass(missionDistribution);
-                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
-                    rtiAmbassador.subscribeInteractionClass(trackingRadar);
-                    break;
-                case 3:
-                    rtiAmbassador.publishInteractionClass(anti_aircraftMissile);
-                    rtiAmbassador.subscribeInteractionClass(routePlanning);
-                    break;
-                case 4:
-                    rtiAmbassador.publishInteractionClass(routePlanning);
-                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
-                    rtiAmbassador.subscribeInteractionClass(trackingRadar);
-                    rtiAmbassador.subscribeInteractionClass(missionDistribution);
-                    break;
-                case 5:
-                    rtiAmbassador.publishInteractionClass(trackingRadar);
-                    rtiAmbassador.subscribeInteractionClass(anti_aircraftMissile);
-                    break;
-                default:
-                    rtiAmbassador.subscribeInteractionClass(messageId);
-                    rtiAmbassador.publishInteractionClass(messageId);
-                    break;
-            }
+            subscribeAndPublishInteractions();
 
             /**********************
              * Reserve object instance name and register object instance
              **********************/
+            //name = federateAttributes.getName();
+            Date date = new Date();
+            name = "id" + Long.toString(date.getTime());
             do {
-                Date date = new Date();
-                username = "f" + new Long(date.getTime()).toString();
-
                 try {
                     reservationComplete = false;
-                    rtiAmbassador.reserveObjectInstanceName(username);
+                    rtiAmbassador.reserveObjectInstanceName(name);
                     synchronized (reservationSemaphore) {
                         // Wait for response from RTI
                         while (!reservationComplete) {
@@ -336,19 +231,19 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                         }
                     }
                     if (!reservationSucceeded) {
-                        System.out.println("Name already taken, try again.");
-                        return;
+                        return "Name already taken, try again.";
                     }
                 } catch (IllegalName e) {
-                    //System.out.println("Illegal name. Try again.");
+                    return "Illegal name. Try again.";
                 } catch (RTIexception e) {
-                    //System.out.println("RTI exception when reserving name: " + e.getMessage());
-                    return;
+                    return "RTI exception when reserving name: " + e.getMessage();
                 }
             } while (!reservationSucceeded);
-            userId = rtiAmbassador.registerObjectInstance(participantId, username);
+            userId = rtiAmbassador.registerObjectInstance(objectClassHandles[federateAttributes.getType()], name);
             AttributeHandleValueMap attributeHandleValueMap = new AttributeHandleValueMapImpl();
-            attributeHandleValueMap.put(attributeIdName,encoderFactory.createHLAunicodeString("0").toByteArray());
+            for (AttributeHandle attributeHandle : mapObjectAttributes.get(objectClassHandles[federateAttributes.getType()])) {
+                attributeHandleValueMap.put(attributeHandle, encoderFactory.createHLAunicodeString("0").toByteArray());
+            }
             rtiAmbassador.updateAttributeValues(userId,attributeHandleValueMap,null);
 
             /**********************
@@ -358,25 +253,28 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             byte[] tag = {};
             try {
                 rtiAmbassador.registerFederationSynchronizationPoint(SYNC_POINT, tag);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
             try {
                 rtiAmbassador.synchronizationPointAchieved(SYNC_POINT);
-            } catch (RTIexception e) {
+            } catch (RTIexception ignored) {
 
             }
 
             // If there is constrained federates, and this federate is regulating, the start time of this federate is not 0.
             currentTime = (HLAfloat64Time) rtiAmbassador.queryLogicalTime();
             advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(federateAttributes.getStep()) );
-        } catch (RTIexception ignored) {
-
+        } catch (RTIexception e) {
+            return "Fail to publish or subscribe: " + e.getMessage();
         }
+
+        return "Success";
     }
 
     public void update(UpdateParameters updateParameters) {
         federateAttributes.setStrategy(updateParameters.getStrategy());
+        federateAttributes.setMechanism(updateParameters.getMechanism());
         federateAttributes.setStep(updateParameters.getStep());
         federateAttributes.setLookahead(updateParameters.getLookahead());
 
@@ -426,10 +324,11 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     }
 
     public ParameterHandleValueMap setParameters() {
+        // To be fixed
         try {
             ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
 
-            HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
+            HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(name);
             HLAinteger16LE statusEncoder = encoderFactory.createHLAinteger16LE();
             HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
             HLAfloat32LE index = encoderFactory.createHLAfloat32LE();
@@ -473,12 +372,12 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                 default:
                     String message = "Test";
                     messageEncoder.setValue(message);
-                    parameters.put(parameterIdText, messageEncoder.toByteArray());
-                    parameters.put(parameterIdSender, nameEncoder.toByteArray());
+                    parameters.put(communicationMessage, messageEncoder.toByteArray());
+                    parameters.put(communicationSender, nameEncoder.toByteArray());
                     break;
             }
             return parameters;
-        } catch (RTIexception e) {
+        } catch (RTIexception ignored) {
 
         }
         return null;
@@ -493,24 +392,20 @@ public class Federate extends NullFederateAmbassador implements Runnable {
              * Send interaction may be into failure because of time management,
              * but attributes update should success for every iteration for its independence of time management.
              **********************/
+            Integer i = 0;
             while(state) {
-                Thread.sleep(1000);
-
-                // Should be optimized, we can create a new variable to store object instance handle so no set is needed.
-                Set<Map.Entry<ObjectInstanceHandle,Participant>> objectsSet = knownObjects.entrySet();
-                Iterator<Map.Entry<ObjectInstanceHandle,Participant>> iterObjects = objectsSet.iterator();
-                Integer i = 0;
-                while(iterObjects.hasNext()) {
-                    Map.Entry<ObjectInstanceHandle,Participant> entry = iterObjects.next();
-                    AttributeHandleValueMap attributeHandleValueMap = new AttributeHandleValueMapImpl();
-                    i++;
-                    attributeHandleValueMap.put(attributeIdName,encoderFactory.createHLAunicodeString(i.toString()).toByteArray());
-                    rtiAmbassador.updateAttributeValues(entry.getKey(),attributeHandleValueMap,null);
+                // update object  attributes
+                i++;
+                AttributeHandleValueMap attributeHandleValueMap = new AttributeHandleValueMapImpl();
+                for (AttributeHandle attributeHandle : mapObjectAttributes.get(objectClassHandles[federateAttributes.getType()])) {
+                    attributeHandleValueMap.put(attributeHandle, encoderFactory.createHLAunicodeString(i.toString()).toByteArray());
                 }
+                rtiAmbassador.updateAttributeValues(userId,attributeHandleValueMap,null);
+                // end of object attributes update.
 
+                // send interactions and request time advancement
                 ParameterHandleValueMap parameters = setParameters();
                 if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 0) {
-                    //rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()],parameters,null);
                     try {
                         rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
                         rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()],parameters,null);
@@ -524,7 +419,8 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                     try {
                         rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
                         rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
-                    } catch (Exception ignored) {
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                     /*
                     try {
@@ -537,7 +433,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                 }
 
                 if(status && isPhysicalDevice && federateAttributes.getMechanism() == 0) {
-                    //rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null);
                     try {
                         rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
                         rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null);
@@ -561,8 +456,11 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                     }
                     */
                 }
+
+                Thread.sleep(1000);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -575,12 +473,14 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
             rtiAmbassador.disconnect();
             rtiAmbassador = null;
-            //timer.cancel();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    /**********************
+     * Callbacks extends from NUllFederateAmbassador Class.
+     **********************/
     @Override
     public void receiveInteraction(InteractionClassHandle interactionClass,
                                    ParameterHandleValueMap theParameters,
@@ -595,7 +495,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
         HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
         HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
 
-        if(interactionClass.equals(cruiseMissile)) {
+        if(interactionClass.equals(interactionClasses[0])) {
             if (!theParameters.containsKey(cruiseMissileStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -616,7 +516,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(early_warningRadar)) {
+        if(interactionClass.equals(interactionClasses[1])) {
             if (!theParameters.containsKey(early_warningRadarStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -637,7 +537,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(missionDistribution)) {
+        if(interactionClass.equals(interactionClasses[2])) {
             if (!theParameters.containsKey(strategyOfMissionDistribution)) {
                 System.out.println("Bad message received: No Strategy.");
                 return;
@@ -651,7 +551,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(anti_aircraftMissile)) {
+        if(interactionClass.equals(interactionClasses[3])) {
             if (!theParameters.containsKey(anti_aircraftStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -672,7 +572,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(routePlanning)) {
+        if(interactionClass.equals(interactionClasses[4])) {
             if (!theParameters.containsKey(route)) {
                 System.out.println("Bad message received: No Route.");
                 return;
@@ -687,7 +587,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(trackingRadar)) {
+        if(interactionClass.equals(interactionClasses[5])) {
             if (!theParameters.containsKey(trackingRadarStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -708,20 +608,20 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if (interactionClass.equals(messageId)) {
-            if (!theParameters.containsKey(parameterIdText)) {
+        if (interactionClass.equals(interactionClasses[6])) {
+            if (!theParameters.containsKey(communicationMessage)) {
                 System.out.println("Bad message received: No text.");
                 return;
             }
-            if (!theParameters.containsKey(parameterIdSender)) {
+            if (!theParameters.containsKey(communicationSender)) {
                 System.out.println("Bad message received: No sender.");
                 return;
             }
             try {
                 HLAunicodeString messageDecoder = encoderFactory.createHLAunicodeString();
                 HLAunicodeString senderDecoder = encoderFactory.createHLAunicodeString();
-                messageDecoder.decode(theParameters.get(parameterIdText));
-                senderDecoder.decode(theParameters.get(parameterIdSender));
+                messageDecoder.decode(theParameters.get(communicationMessage));
+                senderDecoder.decode(theParameters.get(communicationSender));
                 String message = messageDecoder.getValue();
                 String sender = senderDecoder.getValue();
 
@@ -741,6 +641,19 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                                    TransportationTypeHandle theTransport,
                                    LogicalTime theTime,
                                    OrderType receivedOrdering,
+                                   SupplementalReceiveInfo receiveInfo) {
+        System.out.println("MiaoMiao");
+    }
+
+    @Override
+    public void receiveInteraction(InteractionClassHandle interactionClass,
+                                   ParameterHandleValueMap theParameters,
+                                   byte[] userSuppliedTag,
+                                   OrderType sentOrdering,
+                                   TransportationTypeHandle theTransport,
+                                   LogicalTime theTime,
+                                   OrderType receivedOrdering,
+                                   MessageRetractionHandle retractionHandle,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
 
@@ -750,7 +663,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
         HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
         HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
 
-        if(interactionClass.equals(cruiseMissile)) {
+        if(interactionClass.equals(interactionClasses[0])) {
             if (!theParameters.containsKey(cruiseMissileStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -771,7 +684,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(early_warningRadar)) {
+        if(interactionClass.equals(interactionClasses[1])) {
             if (!theParameters.containsKey(early_warningRadarStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -792,7 +705,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(missionDistribution)) {
+        if(interactionClass.equals(interactionClasses[2])) {
             if (!theParameters.containsKey(strategyOfMissionDistribution)) {
                 System.out.println("Bad message received: No Strategy.");
                 return;
@@ -806,7 +719,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(anti_aircraftMissile)) {
+        if(interactionClass.equals(interactionClasses[3])) {
             if (!theParameters.containsKey(anti_aircraftStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -827,7 +740,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(routePlanning)) {
+        if(interactionClass.equals(interactionClasses[4])) {
             if (!theParameters.containsKey(route)) {
                 System.out.println("Bad message received: No Route.");
                 return;
@@ -842,7 +755,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if(interactionClass.equals(trackingRadar)) {
+        if(interactionClass.equals(interactionClasses[5])) {
             if (!theParameters.containsKey(trackingRadarStatus)) {
                 System.out.println("Bad message received: No Status.");
                 return;
@@ -863,20 +776,20 @@ public class Federate extends NullFederateAmbassador implements Runnable {
             }
         }
 
-        if (interactionClass.equals(messageId)) {
-            if (!theParameters.containsKey(parameterIdText)) {
+        if (interactionClass.equals(interactionClasses[6])) {
+            if (!theParameters.containsKey(communicationMessage)) {
                 System.out.println("Bad message received: No text.");
                 return;
             }
-            if (!theParameters.containsKey(parameterIdSender)) {
+            if (!theParameters.containsKey(communicationSender)) {
                 System.out.println("Bad message received: No sender.");
                 return;
             }
             try {
                 HLAunicodeString messageDecoder = encoderFactory.createHLAunicodeString();
                 HLAunicodeString senderDecoder = encoderFactory.createHLAunicodeString();
-                messageDecoder.decode(theParameters.get(parameterIdText));
-                senderDecoder.decode(theParameters.get(parameterIdSender));
+                messageDecoder.decode(theParameters.get(communicationMessage));
+                senderDecoder.decode(theParameters.get(communicationSender));
                 String message = messageDecoder.getValue();
                 String sender = senderDecoder.getValue();
 
@@ -911,10 +824,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                                      byte[] userSuppliedTag,
                                      OrderType sentOrdering,
                                      SupplementalRemoveInfo removeInfo) {
-        Participant member = knownObjects.remove(theObject);
-        if (member != null) {
-            System.out.println("[" + member + " has left]");
-        }
     }
 
     @Override
@@ -924,22 +833,16 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                                        OrderType sentOrdering,
                                        TransportationTypeHandle theTransport,
                                        SupplementalReflectInfo reflectInfo) {
-        if (!knownObjects.containsKey(theObject)) {
-            if (theAttributes.containsKey(attributeIdName)) {
-                try {
-                    final HLAunicodeString usernameDecoder = encoderFactory.createHLAunicodeString();
-                    usernameDecoder.decode(theAttributes.get(attributeIdName));
-                    String memberName = usernameDecoder.getValue();
-                    Participant member = new Participant(memberName);
-                    System.out.println("[" + member + " has joined]");
-                    System.out.print("> ");
-                    knownObjects.put(theObject, member);
-                } catch (DecoderException e) {
-                    System.out.println("Failed to decode incoming attribute");
-                }
+        try {
+            HLAunicodeString h = encoderFactory.createHLAunicodeString();
+            ObjectClassHandle o = rtiAmbassador.getKnownObjectClassHandle(theObject);
+            List<AttributeHandle> list = mapObjectAttributes.get(o);
+            for(AttributeHandle ah : list) {
+                h.decode(theAttributes.get(ah));
+                System.out.println(h.toString());
             }
-        } else {
-            System.out.println("miao~");
+        } catch (Exception e) {
+            System.out.println("Object Instance Not Known");
         }
     }
 
@@ -947,15 +850,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     public final void provideAttributeValueUpdate(ObjectInstanceHandle theObject,
                                                   AttributeHandleSet theAttributes,
                                                   byte[] userSuppliedTag) {
-        if (theObject.equals(userId) && theAttributes.contains(attributeIdName)) {
-            try {
-                AttributeHandleValueMap attributeValues = rtiAmbassador.getAttributeHandleValueMapFactory().create(1);
-                HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(username);
-                attributeValues.put(attributeIdName, nameEncoder.toByteArray());
-                //rtiAmbassador.updateAttributeValues(userId, attributeValues, null);
-            } catch (RTIexception ignored) {
-            }
-        }
+        System.out.println("Prepare to update attribute");
     }
 
     @Override
@@ -1001,5 +896,195 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     public void timeAdvanceGrant(LogicalTime logicalTime) throws FederateInternalError {
         currentTime = (HLAfloat64Time) logicalTime;
         System.out.println(this.federateAttributes.getName() + ": Time Advance to " + logicalTime.toString() + " Successfully");
+    }
+
+    /**********************
+     * Extract functions for understanding easier.
+     **********************/
+
+    /**********************
+     * Subscribe and publish objects
+     **********************/
+    private void subscribeAndPublishObjects() {
+        List<AttributeHandle> tmp;
+        try {
+            ObjectClassHandle objectCruiseMissile = rtiAmbassador.getObjectClassHandle("CruiseMissile");
+            AttributeHandle cruiseMissileAttributeId = rtiAmbassador.getAttributeHandle(objectCruiseMissile, "ID");
+            tmp = new ArrayList<>();
+            tmp.add(cruiseMissileAttributeId);
+            mapObjectAttributes.put(objectCruiseMissile,tmp);
+
+            ObjectClassHandle objectEarly_warningRadar = rtiAmbassador.getObjectClassHandle("Early_warningRadar");
+            AttributeHandle early_warningRadarAttributeId = rtiAmbassador.getAttributeHandle(objectEarly_warningRadar, "ID");
+            tmp = new ArrayList<>();
+            tmp.add(early_warningRadarAttributeId);
+            mapObjectAttributes.put(objectEarly_warningRadar,tmp);
+
+            ObjectClassHandle objectMissionDistribution = rtiAmbassador.getObjectClassHandle("MissionDistribution");
+            AttributeHandle missionDistributionAttributeId = rtiAmbassador.getAttributeHandle(objectMissionDistribution, "ID");
+            tmp = new ArrayList<>();
+            tmp.add(missionDistributionAttributeId);
+            mapObjectAttributes.put(objectMissionDistribution, tmp);
+
+            ObjectClassHandle objectAnti_aircraftMissile = rtiAmbassador.getObjectClassHandle("Anti_aircraftMissile");
+            AttributeHandle anti_aircraftMissileAttributeId = rtiAmbassador.getAttributeHandle(objectAnti_aircraftMissile, "ID");
+            tmp = new ArrayList<>();
+            tmp.add(anti_aircraftMissileAttributeId);
+            mapObjectAttributes.put(objectAnti_aircraftMissile,tmp);
+
+            ObjectClassHandle objectRoutePlanning = rtiAmbassador.getObjectClassHandle("RoutePlanning");
+            AttributeHandle routePlanningAttributeId = rtiAmbassador.getAttributeHandle(objectRoutePlanning, "ID");
+            tmp = new ArrayList<>();
+            tmp.add(routePlanningAttributeId);
+            mapObjectAttributes.put(objectRoutePlanning,tmp);
+
+            ObjectClassHandle objectTrackingRadar = rtiAmbassador.getObjectClassHandle("TrackingRadar");
+            AttributeHandle trackingRadarAttributeId = rtiAmbassador.getAttributeHandle(objectTrackingRadar, "ID");
+            tmp = new ArrayList<>();
+            tmp.add(trackingRadarAttributeId);
+            mapObjectAttributes.put(objectTrackingRadar,tmp);
+
+            ObjectClassHandle objectParticipant = rtiAmbassador.getObjectClassHandle("Participant");
+            AttributeHandle participantAttributeId = rtiAmbassador.getAttributeHandle(objectParticipant, "Name");
+            tmp = new ArrayList<>();
+            tmp.add(participantAttributeId);
+            mapObjectAttributes.put(objectParticipant,tmp);
+
+            objectClassHandles = new ObjectClassHandle[]{objectCruiseMissile, objectEarly_warningRadar, objectMissionDistribution, objectAnti_aircraftMissile, objectRoutePlanning, objectTrackingRadar, objectParticipant};
+
+            AttributeHandleSet publishAttributeHandleSet = rtiAmbassador.getAttributeHandleSetFactory().create();
+            AttributeHandleSet subscribeAttributeHandleSet = rtiAmbassador.getAttributeHandleSetFactory().create();
+
+            // Publish object attributes.
+            for (AttributeHandle attributeHandle : mapObjectAttributes.get(objectClassHandles[federateAttributes.getType()])) {
+                publishAttributeHandleSet.add(attributeHandle);
+            }
+            rtiAmbassador.publishObjectClassAttributes(objectClassHandles[federateAttributes.getType()],publishAttributeHandleSet);
+
+            // Subscribe object attributes.
+            switch (federateAttributes.getType()) {
+                case 0:
+                    break;
+                case 1:
+                    subscribeAttributeHandleSet.add(cruiseMissileAttributeId);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectCruiseMissile, subscribeAttributeHandleSet);
+                    break;
+                case 2:
+                    subscribeAttributeHandleSet.add(early_warningRadarAttributeId);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectEarly_warningRadar, subscribeAttributeHandleSet);
+                    break;
+                case 3:
+                    subscribeAttributeHandleSet.add(routePlanningAttributeId);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectRoutePlanning, subscribeAttributeHandleSet);
+                    break;
+                case 4:
+                    subscribeAttributeHandleSet.add(trackingRadarAttributeId);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectTrackingRadar, subscribeAttributeHandleSet);
+                    break;
+                case 5:
+                    subscribeAttributeHandleSet.add(anti_aircraftMissileAttributeId);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectAnti_aircraftMissile, subscribeAttributeHandleSet);
+                    break;
+                default:
+                    subscribeAttributeHandleSet = publishAttributeHandleSet;
+                    rtiAmbassador.publishObjectClassAttributes(objectParticipant, subscribeAttributeHandleSet);
+                    break;
+            }
+        } catch (RTIexception ignored) {
+        }
+    }
+
+    /**********************
+     * Subscribe and publish interactions
+     **********************/
+    private void subscribeAndPublishInteractions() {
+        List<ParameterHandle> tmp;
+
+        try {
+            InteractionClassHandle cruiseMissile = rtiAmbassador.getInteractionClassHandle("CruiseMissile");
+            cruiseMissileStatus = rtiAmbassador.getParameterHandle(cruiseMissile,"Status");
+            cruiseMissilePosition = rtiAmbassador.getParameterHandle(cruiseMissile,"Position");
+            tmp = new ArrayList<>();
+            tmp.add(cruiseMissileStatus);
+            tmp.add(cruiseMissilePosition);
+            mapInteractionParameters.put(cruiseMissile,tmp);
+
+            InteractionClassHandle early_warningRadar = rtiAmbassador.getInteractionClassHandle("Early_warningRadar");
+            early_warningRadarStatus = rtiAmbassador.getParameterHandle(early_warningRadar,"Status");
+            early_warningRadarPosition = rtiAmbassador.getParameterHandle(early_warningRadar,"Position");
+            tmp = new ArrayList<>();
+            tmp.add(early_warningRadarStatus);
+            tmp.add(early_warningRadarPosition);
+            mapInteractionParameters.put(early_warningRadar,tmp);
+
+            InteractionClassHandle missionDistribution = rtiAmbassador.getInteractionClassHandle("MissionDistribution");
+            strategyOfMissionDistribution = rtiAmbassador.getParameterHandle(missionDistribution,"Strategy");
+            tmp = new ArrayList<>();
+            tmp.add(strategyOfMissionDistribution);
+            mapInteractionParameters.put(missionDistribution,tmp);
+
+            InteractionClassHandle anti_aircraftMissile = rtiAmbassador.getInteractionClassHandle("Anti_aircraftMissile");
+            anti_aircraftStatus = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Status");
+            anti_aircraftMissilePosition = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Position");
+            tmp = new ArrayList<>();
+            tmp.add(anti_aircraftStatus);
+            tmp.add(anti_aircraftMissilePosition);
+            mapInteractionParameters.put(anti_aircraftMissile,tmp);
+
+            InteractionClassHandle routePlanning = rtiAmbassador.getInteractionClassHandle("RoutePlanning");
+            route = rtiAmbassador.getParameterHandle(routePlanning,"Route");
+            tmp = new ArrayList<>();
+            tmp.add(route);
+            mapInteractionParameters.put(routePlanning,tmp);
+
+            InteractionClassHandle trackingRadar = rtiAmbassador.getInteractionClassHandle("TrackingRadar");
+            trackingRadarStatus = rtiAmbassador.getParameterHandle(trackingRadar,"Status");
+            trackingRadarPosition = rtiAmbassador.getParameterHandle(trackingRadar,"Position");
+            tmp = new ArrayList<>();
+            tmp.add(trackingRadarStatus);
+            tmp.add(trackingRadarPosition);
+            mapInteractionParameters.put(trackingRadar,tmp);
+
+            InteractionClassHandle communication = rtiAmbassador.getInteractionClassHandle("Communication");
+            communicationMessage = rtiAmbassador.getParameterHandle(communication, "Message");
+            communicationSender = rtiAmbassador.getParameterHandle(communication, "Sender");
+            tmp = new ArrayList<>();
+            tmp.add(communicationMessage);
+            tmp.add(communicationSender);
+            mapInteractionParameters.put(communication,tmp);
+
+            interactionClasses = new InteractionClassHandle[]{cruiseMissile,early_warningRadar,missionDistribution,anti_aircraftMissile,routePlanning,trackingRadar,communication};
+
+            // Publish interactions
+            rtiAmbassador.publishInteractionClass(interactionClasses[federateAttributes.getType()]);
+            // Subscribe interactions
+            switch (federateAttributes.getType()) {
+                case 0:
+                    break;
+                case 1:
+                    rtiAmbassador.subscribeInteractionClass(cruiseMissile);
+                    break;
+                case 2:
+                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
+                    rtiAmbassador.subscribeInteractionClass(trackingRadar);
+                    break;
+                case 3:
+                    rtiAmbassador.subscribeInteractionClass(routePlanning);
+                    break;
+                case 4:
+                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
+                    rtiAmbassador.subscribeInteractionClass(trackingRadar);
+                    rtiAmbassador.subscribeInteractionClass(missionDistribution);
+                    break;
+                case 5:
+                    rtiAmbassador.subscribeInteractionClass(anti_aircraftMissile);
+                    break;
+                default:
+                    rtiAmbassador.subscribeInteractionClass(communication);
+                    break;
+            }
+        } catch (RTIexception ignored) {
+
+        }
     }
 }
