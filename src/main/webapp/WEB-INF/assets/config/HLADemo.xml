@@ -43,7 +43,7 @@
                 <sharing>Neither</sharing>
                 <semantics>Cruise Missile</semantics>
                 <attribute>
-                    <name>ID</name>
+                    <name>Position</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
@@ -51,7 +51,7 @@
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
                     <order>Receive</order>
-                    <semantics>ID of Cruise Missile</semantics>
+                    <semantics>Position of Cruise Missile</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -91,7 +91,7 @@
                 <sharing>Neither</sharing>
                 <semantics>Anti Aircraft Missile</semantics>
                 <attribute>
-                    <name>ID</name>
+                    <name>Position</name>
                     <dataType>HLAunicodeString</dataType>
                     <updateType>Conditional</updateType>
                     <updateCondition></updateCondition>
@@ -99,7 +99,7 @@
                     <sharing>Neither</sharing>
                     <transportation>HLAreliable</transportation>
                     <order>Receive</order>
-                    <semantics>ID of Anti Aircraft Missile</semantics>
+                    <semantics>Position of Anti Aircraft Missile</semantics>
                 </attribute>
             </objectClass>
             <objectClass>
@@ -119,7 +119,23 @@
                 </attribute>
             </objectClass>
             <objectClass>
-                <name>TrackingRadar</name>
+                <name>TrackingRadarForEnemyTarget</name>
+                <sharing>Neither</sharing>
+                <semantics>Tracking Radar</semantics>
+                <attribute>
+                    <name>ID</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <updateType>Conditional</updateType>
+                    <updateCondition></updateCondition>
+                    <ownership>DivestAcquire</ownership>
+                    <sharing>Neither</sharing>
+                    <transportation>HLAreliable</transportation>
+                    <order>Receive</order>
+                    <semantics>ID of Tracking Radar</semantics>
+                </attribute>
+            </objectClass>
+            <objectClass>
+                <name>TrackingRadarForOurTarget</name>
                 <sharing>Neither</sharing>
                 <semantics>Tracking Radar</semantics>
                 <attribute>
@@ -166,11 +182,6 @@
                     <dataType>HLAinteger16LE</dataType>
                     <semantics>Status of cruise missile</semantics>
                 </parameter>
-                <parameter>
-                    <name>Position</name>
-                    <dataType>HLAunicodeString</dataType>
-                    <semantics>Position of cruise missile</semantics>
-                </parameter>
             </interactionClass>
             <interactionClass>
                 <name>Early_warningRadar</name>
@@ -212,11 +223,6 @@
                     <dataType>HLAinteger16LE</dataType>
                     <semantics>Status of anti aircraft missile</semantics>
                 </parameter>
-                <parameter>
-                    <name>Position</name>
-                    <dataType>HLAunicodeString</dataType>
-                    <semantics>Position of anti aircraft missile</semantics>
-                </parameter>
             </interactionClass>
             <interactionClass>
                 <name>RoutePlanning</name>
@@ -231,11 +237,28 @@
                 </parameter>
             </interactionClass>
             <interactionClass>
-                <name>TrackingRadar</name>
+                <name>TrackingRadarForEnemyTarget</name>
                 <sharing>PublishSubscribe</sharing>
                 <transportation>HLAreliable</transportation>
                 <order>TimeStamp</order>
-                <semantics>Tracking Radar</semantics>
+                <semantics>Tracking Enemy's Target</semantics>
+                <parameter>
+                    <name>Status</name>
+                    <dataType>HLAinteger16LE</dataType>
+                    <semantics>Status of tracking radar</semantics>
+                </parameter>
+                <parameter>
+                    <name>Position</name>
+                    <dataType>HLAunicodeString</dataType>
+                    <semantics>Position of anti aircraft missile</semantics>
+                </parameter>
+            </interactionClass>
+            <interactionClass>
+                <name>TrackingRadarForOurTarget</name>
+                <sharing>PublishSubscribe</sharing>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <semantics>Tracking Our Target</semantics>
                 <parameter>
                     <name>Status</name>
                     <dataType>HLAinteger16LE</dataType>

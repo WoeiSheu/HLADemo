@@ -34,7 +34,7 @@ public class FederateAttributes {
         return type;
     }
     public String getTypeName() {
-        String[] typeNames = new String[]{"Cruise Missile","Early-warning Radar","Mission Distribution","Anti-aircraft Missile","Route Planning","Tracking Radar"};
+        String[] typeNames = new String[]{"Cruise Missile","Early-warning Radar","Mission Distribution","Anti-aircraft Missile","Route Planning","Tracking Radar for Enemy Target", "Tracking Radar for Our Target", "Test"};
         return typeNames[this.type];
     }
     public String getFomName() {
@@ -100,11 +100,14 @@ public class FederateAttributes {
             case "Route Planning":
                 this.type = 4;
                 break;
-            case "Tracking Radar":
+            case "Tracking Radar(Enemy)":
                 this.type = 5;
                 break;
-            default:
+            case "Tracking Radar(Our)":
                 this.type = 6;
+                break;
+            default:
+                this.type = 7;
         }
     }
     public void setFomName(String fomName) {

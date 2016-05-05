@@ -5,8 +5,18 @@ angular.module('HLADemo').controller('GlobalController', ['$http', '$scope', '$c
     var ctrl = this;
     //$cookies.put( 'id', Date.now().toString() );
     sessionStorage.setItem('id',Date.now().toString());
+
     $("nav .navbar-collapse li").on('click', function() {
         $("nav .navbar-collapse li").removeClass('active');
         $(this).addClass('active');
+        $(".navbar-collapse").collapse('hide');
     });
+
+    var currentPage = window.location.hash.replace("/","");
+    if(currentPage != "#" && currentPage != "") {
+        $(currentPage).addClass('active');
+    } else {
+        $("#home").addClass('active');
+    }
+
 }]);

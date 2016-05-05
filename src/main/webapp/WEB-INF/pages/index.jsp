@@ -23,7 +23,7 @@
 </head>
 <body ng-app="HLADemo">
   <nav class="navbar navbar-inverse navbar-static-top">
-    <div class="container">
+    <div class="container-fluid">
       <div class="navbar-header">
         <a class="navbar-brand" href="#">HLA Demo</a>
         <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".navbar-collapse">
@@ -35,7 +35,7 @@
 
       <div class="navbar-collapse collapse">
         <ul class="nav navbar-nav">
-          <li class="active"><a href="#">Home</a></li>
+          <li id="home"><a href="#">Home</a></li>
           <li id="rti"><a href="#/rti">RTI</a></li>
           <li id="federates"><a href="#/federates">Federates</a></li>
           <li id="administration"><a href="#/administration">Admin</a></li>

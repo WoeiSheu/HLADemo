@@ -7,7 +7,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
 
     var host = window.location.protocol + "//" + window.location.host;
     $scope.request = {"crcAddress":"192.168.1.105", "isPhysicalDevice":"No", "type":"Cruise Missile", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
-    $scope.availableTypes = ["Cruise Missile","Early-warning Radar","Mission Distribution","Anti-aircraft Missile","Route Planning","Tracking Radar"];
+    $scope.availableTypes = ["Cruise Missile","Early-warning Radar","Mission Distribution","Anti-aircraft Missile","Route Planning","Tracking Radar(Enemy)","Tracking Radar(Our)","Test"];
     $scope.availableMechanisms = ["Time Stepped", "Event Driven"];
     $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
@@ -69,6 +69,12 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
                 federate.startOrPause = 'Start';
             });
         }
+    };
+
+    $scope.runAll = function() {
+        $scope.federates.map(function (federate) {
+            $scope.run(federate);
+        });
     };
 
     $scope.delete = function(federate) {
