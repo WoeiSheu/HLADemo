@@ -1,8 +1,4 @@
 #### To do:
-3. Object Instance Name 命名方式, 以及Object Instance使用问题
-
-4. nextMessageRequest() 使用问题
-
 5. 设计有限关联的时间管理策略
 
 9. 连接数据库
@@ -14,3 +10,5 @@
 4. RTI Tab 页面显示连接的联邦成员
 5. Update step或lookahead后导致其他联邦成员改变, 还是第二次Update导致的?
   Update之后时间可能一步推进到最大? 但是Federate里的timeToMoveTo还没有改变
+6. Object Instance Name 命名方式, 以及Object Instance使用问题
+7. nextMessageRequest() 使用问题
