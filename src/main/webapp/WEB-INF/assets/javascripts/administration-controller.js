@@ -6,9 +6,9 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
     var ctrl = this;
 
     var host = window.location.protocol + "//" + window.location.host;
-    $scope.request = {"crcAddress":"192.168.1.105", "isPhysicalDevice":"No", "type":"Cruise Missile", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/HLADemo.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
-    $scope.availableTypes = ["Cruise Missile","Early-warning Radar","Mission Distribution","Anti-aircraft Missile","Route Planning","Tracking Radar(Enemy)","Tracking Radar(Our)","Test"];
-    $scope.availableMechanisms = ["Time Stepped", "Event Driven"];
+    $scope.request = {"crcAddress":"192.168.1.105", "isPhysicalDevice":"No", "type":"GroupA", "federationName": "Gaea", "federateName": "", "mechanism": "Event Driven", "fomUrl": host+"/assets/config/Thesis.xml", "strategy": "Regulating", "step": "", "lookahead": ""};
+    $scope.availableTypes = ["GroupA","GroupB","GroupC","GroupD","GroupE","GroupF","GroupI"];
+    $scope.availableMechanisms = ["Time Stepped", "Event Driven", "Auto"];
     $scope.availableStrategies = ["Neither Regulating nor Constrained","Regulating","Constrained","Regulating and Constrained"];
 
     $scope.create = function() {
@@ -71,10 +71,18 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
         }
     };
 
+    $scope.elapsedTime = 0;
+    var haveRun = false;
+    var startTime = 0;
+    var stopTime = 0;
     $scope.runAll = function() {
         $scope.federates.map(function (federate) {
             $scope.run(federate);
         });
+        if(!haveRun) {
+            startTime = Date.now();
+            haveRun = true;
+        }
     };
 
     $scope.delete = function(federate) {
@@ -112,6 +120,7 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
      **********************/
     this.initFederates = function () {
         $scope.federates = [];
+
         $http({method: 'GET', url: '/federates'}).success(function (data) {
             for (var federation in data) {
                 var federates = data[federation];
@@ -141,6 +150,10 @@ angular.module('HLADemo').controller('AdministrationController', ['$http', '$sco
      * update time periodically
      **********************/
     var intervalPromise = $interval(function () {
+        if(haveRun) {
+            $scope.elapsedTime = (Date.now() - startTime) / 1000;
+        }
+
         $scope.federates.forEach(function(item,i,s){
             $http({method: "GET", url: "/federates/time/" + item.federation + "/" + item.name}).success(function (data) {
                 item.time = data.toFixed(2);

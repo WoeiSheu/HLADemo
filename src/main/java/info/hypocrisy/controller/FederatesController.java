@@ -81,10 +81,10 @@ public class FederatesController {
             }
         } else {
             Map<String,Federate> mapFederate = new HashMap<>();
-            Federate federate = new Federate(federateParameters);
+           Federate federate = new Federate(federateParameters);
             String status = federate.createAndJoin();
             if(!"Success".equals(status)) {
-                return "{\"status\":\"" + status + "\"}";
+               return "{\"status\":\"" + status + "\"}";
             }
             mapFederate.put(federateName,federate);
             mapFederation.put(federationName,mapFederate);

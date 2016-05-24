@@ -11,6 +11,8 @@ import se.pitch.prti1516e.time.HLAfloat64TimeImpl;
 
 import java.util.*;
 import java.net.URL;
+import java.util.concurrent.ThreadFactory;
+
 /**
  * Created by Hypocrisy on 3/23/2016.
  * This class implements a NullFederateAmbassador.
@@ -38,18 +40,12 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     /**********************
      * All interaction class handle and their parameters' handle
      **********************/
-    private ParameterHandle cruiseMissileStatus;
-    private ParameterHandle early_warningRadarStatus;
-    private ParameterHandle early_warningRadarPosition;
-    private ParameterHandle strategyOfMissionDistribution;
-    private ParameterHandle anti_aircraftStatus;
-    private ParameterHandle route;
-    private ParameterHandle trackingRadarForEnemyStatus;
-    private ParameterHandle trackingRadarForEnemyPosition;
-    private ParameterHandle trackingRadarForOurStatus;
-    private ParameterHandle trackingRadarForOurPosition;
-    private ParameterHandle communicationMessage;
-    private ParameterHandle communicationSender;
+    private ParameterHandle groupBLocation;
+    private ParameterHandle groupCLocation;
+    private ParameterHandle groupEResult;
+    private ParameterHandle groupFRoute;
+    private ParameterHandle StatusValue;
+    private ParameterHandle MomentValue;
 
     private InteractionClassHandle[] interactionClasses;
     private Map<InteractionClassHandle,List<ParameterHandle>> mapInteractionParameters = new HashMap<>();
@@ -239,7 +235,7 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                     return "RTI exception when reserving name: " + e.getMessage();
                 }
             } while (!reservationSucceeded);
-            objectInstanceId = rtiAmbassador.registerObjectInstance(objectClassHandles[federateAttributes.getType()], name);
+            //objectInstanceId = rtiAmbassador.registerObjectInstance(objectClassHandles[federateAttributes.getType()], name);
 
             /**********************
              * Register Synchronization Point
@@ -318,66 +314,55 @@ public class Federate extends NullFederateAmbassador implements Runnable {
         advancedStep = new HLAfloat64IntervalImpl( Double.parseDouble(updateParameters.getStep()) );
     }
 
-    public ParameterHandleValueMap setParameters() {
+    public void sendMessages() {
         // To be fixed
         try {
             ParameterHandleValueMap parameters = rtiAmbassador.getParameterHandleValueMapFactory().create(1);
+            HLAunicodeString stringEncoder = encoderFactory.createHLAunicodeString();
 
-            HLAinteger16LE statusEncoder = encoderFactory.createHLAinteger16LE();
-            HLAunicodeString positionEncoder = encoderFactory.createHLAunicodeString();
-            HLAfloat32LE index = encoderFactory.createHLAfloat32LE();
-            HLAvariableArray variableEncoder = encoderFactory.createHLAvariableArray(factory);
+            HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
+            HLAfloat64Time timestamp;
+            if(federateAttributes.getType() == 6) {
+                timestamp = realTime.subtract(realTimeOffset).add(lookahead);
+            } else {
+                timestamp = currentTime.add(lookahead).add(advancedStep);
+            }
 
             switch (federateAttributes.getType()) {
                 case 0:
-                    statusEncoder.setValue((short) 1);
-                    parameters.put(cruiseMissileStatus, statusEncoder.toByteArray());
                     break;
                 case 1:
-                    statusEncoder.setValue((short) 1);
-                    positionEncoder.setValue("Early Warning Radar");
-                    parameters.put(early_warningRadarStatus, statusEncoder.toByteArray());
-                    parameters.put(early_warningRadarPosition, positionEncoder.toByteArray());
+                    stringEncoder.setValue("Location of B");
+                    parameters.put(groupBLocation, stringEncoder.toByteArray());
                     break;
                 case 2:
-                    index.setValue((float) 1.00);
-                    variableEncoder.addElement(index);
-                    parameters.put(strategyOfMissionDistribution, variableEncoder.toByteArray());
+                    stringEncoder.setValue("Location of C");
+                    parameters.put(groupCLocation, stringEncoder.toByteArray());
                     break;
                 case 3:
-                    statusEncoder.setValue((short) 1);
-                    parameters.put(anti_aircraftStatus, statusEncoder.toByteArray());
                     break;
                 case 4:
-                    index.setValue((float) 1.00);
-                    variableEncoder.addElement(index);
-                    parameters.put(route, variableEncoder.toByteArray());
+                    stringEncoder.setValue("Result of E");
+                    parameters.put(groupEResult, stringEncoder.toByteArray());
+                    stringEncoder.setValue("Status of E");
+                    parameters.put(StatusValue, stringEncoder.toByteArray());
                     break;
                 case 5:
-                    statusEncoder.setValue((short) 1);
-                    positionEncoder.setValue("Tracking Radar for Enemy Target");
-                    parameters.put(trackingRadarForEnemyStatus, statusEncoder.toByteArray());
-                    parameters.put(trackingRadarForEnemyPosition, positionEncoder.toByteArray());
+                    stringEncoder.setValue("Route of F");
+                    parameters.put(groupFRoute, stringEncoder.toByteArray());
+                    stringEncoder.setValue("Status of F");
+                    parameters.put(StatusValue, stringEncoder.toByteArray());
                     break;
                 case 6:
-                    statusEncoder.setValue((short) 1);
-                    positionEncoder.setValue("Tracking Radar for Our Target");
-                    parameters.put(trackingRadarForOurStatus, statusEncoder.toByteArray());
-                    parameters.put(trackingRadarForOurPosition, positionEncoder.toByteArray());
+                    stringEncoder.setValue("Moment of I");
+                    parameters.put(MomentValue, stringEncoder.toByteArray());
+
                     break;
                 default:
-                    HLAunicodeString nameEncoder = encoderFactory.createHLAunicodeString(name);
-                    HLAunicodeString messageEncoder = encoderFactory.createHLAunicodeString();
-                    String message = "Test";
-                    messageEncoder.setValue(message);
-                    parameters.put(communicationMessage, messageEncoder.toByteArray());
-                    parameters.put(communicationSender, nameEncoder.toByteArray());
                     break;
             }
-            return parameters;
         } catch (RTIexception ignored) {
         }
-        return null;
     }
 
     public boolean isFirst = true;
@@ -389,71 +374,82 @@ public class Federate extends NullFederateAmbassador implements Runnable {
              * Send interaction may be into failure because of time management,
              * but attributes update should success for every iteration for its independence of time management.
              **********************/
-            Integer objectAttribute = 0;
             while(state) {
                 // update object  attributes
-                objectAttribute++;
-                AttributeHandleValueMap attributeHandleValueMap = new AttributeHandleValueMapImpl();
-                for (AttributeHandle attributeHandle : mapObjectAttributes.get(objectClassHandles[federateAttributes.getType()])) {
-                    attributeHandleValueMap.put(attributeHandle, encoderFactory.createHLAunicodeString(objectAttribute.toString()).toByteArray());
-                }
-                rtiAmbassador.updateAttributeValues(objectInstanceId,attributeHandleValueMap,null);
                 // end of object attributes update.
 
                 // send interactions and request time advancement
-                ParameterHandleValueMap parameters = setParameters();
+                sendMessages();
+
+                // Time Advance
+                if(status) {
+                    try {
+                        switch (federateAttributes.getType()) {
+                            case 0:
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                            case 1:
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                            case 2:
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                            case 3:
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                            case 4:
+                                if(currentTime.getValue() > 59 && currentTime.getValue() < 61) {
+                                    Thread.sleep(20000);
+                                }
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                            case 5:
+                                if(currentTime.getValue() > 79 && currentTime.getValue() < 81) {
+                                    Thread.sleep(20000);
+                                }
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                            case 6:
+                                rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
+                                break;
+                            default:
+                                rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
+                                break;
+                        }
+                    } catch (RTIexception e) {
+                        //
+                    }
+                }
+                /*
                 if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 0) {
                     try {
                         rtiAmbassador.timeAdvanceRequest(currentTime.add(advancedStep));
-                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()],parameters,null);
                     } catch (Exception ignored) {
                     }
                 }
 
                 if(status && !isPhysicalDevice && federateAttributes.getMechanism() == 1) {
-                    HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
-                    HLAfloat64Time timestamp = currentTime.add(lookahead).add(advancedStep);
                     try {
                         rtiAmbassador.nextMessageRequest(currentTime.add(advancedStep));
-                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
                     } catch (Exception ignored) {
                         //e.printStackTrace();
                     }
-                    /*
-                    try {
-                        //rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
-                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
-                    } catch (RTIexception e) {
-                        e.printStackTrace();
-                    }
-                    */
                 }
 
                 if(status && isPhysicalDevice && federateAttributes.getMechanism() == 0) {
                     try {
                         rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
-                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null);
                     } catch (Exception ignored) {
                     }
                 }
 
                 if(status && isPhysicalDevice && federateAttributes.getMechanism() == 1) {
-                    HLAfloat64Interval lookahead = new HLAfloat64IntervalImpl(Double.parseDouble(federateAttributes.getLookahead()));
-                    HLAfloat64Time timestamp = realTime.subtract(realTimeOffset).add(lookahead);
                     try {
                         rtiAmbassador.timeAdvanceRequest(realTime.subtract(realTimeOffset));
-                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
                     } catch (Exception ignored) {
                     }
-                    /*
-                    try {
-                        //rtiAmbassador.changeInteractionOrderType(messageId,OrderType.TIMESTAMP);
-                        rtiAmbassador.sendInteraction(interactionClasses[federateAttributes.getType()], parameters, null, timestamp);
-                    } catch (RTIexception e) {
-                    }
-                    */
                 }
-
+                */
                 Thread.sleep(1000);
             }
         } catch (Exception e) {
@@ -486,51 +482,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                                    TransportationTypeHandle theTransport,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        System.out.println(this.federateAttributes.getName() + " received interactions");
-
-        HLAinteger16LE statusDecoder = encoderFactory.createHLAinteger16LE();
-        HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
-        HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
-
-        List<ParameterHandle> parameters = mapInteractionParameters.get(interactionClass);
-        for (ParameterHandle parameterHandle : parameters) {
-            try {
-                if (parameterHandle.equals(cruiseMissileStatus)
-                        || parameterHandle.equals(early_warningRadarStatus)
-                        || parameterHandle.equals(anti_aircraftStatus)
-                        || parameterHandle.equals(trackingRadarForEnemyStatus)
-                        || parameterHandle.equals(trackingRadarForOurStatus)
-                        ) {
-                    statusDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.print("Status: " + statusDecoder.getValue() + ";");
-                }
-                if (parameterHandle.equals(early_warningRadarPosition)
-                        || parameterHandle.equals(trackingRadarForEnemyPosition)
-                        || parameterHandle.equals(trackingRadarForOurPosition)
-                        ) {
-                    positionDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.println("Position: " + positionDecoder.getValue());
-                }
-                if (parameterHandle.equals(strategyOfMissionDistribution)
-                        || parameterHandle.equals(route)
-                        ) {
-                    variableArrayDecoder.decode(theParameters.get(parameterHandle));
-                    String variableArray = variableArrayDecoder.toString();
-                    System.out.println("Distribution: " + variableArray);
-                }
-
-                // Test
-                if (parameterHandle.equals(communicationMessage)
-                        || parameterHandle.equals(communicationSender)
-                        ) {
-                    HLAunicodeString communicationDecoder = encoderFactory.createHLAunicodeString();
-                    communicationDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.println("Communication: " + communicationDecoder.getValue());
-                }
-            } catch (DecoderException e) {
-                System.out.println("Failed to decode incoming interaction");
-            }
-        }
     }
 
     @Override
@@ -542,57 +493,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                                    LogicalTime theTime,
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo) {
-        System.out.println(this.federateAttributes.getName() + " received interaction with time " + theTime.toString());
-
-        try {
-            advancedStep = (HLAfloat64Interval) theTime.distance(currentTime);
-        } catch (InvalidLogicalTime invalidLogicalTime) {
-            invalidLogicalTime.printStackTrace();
-        }
-
-        HLAinteger16LE statusDecoder = encoderFactory.createHLAinteger16LE();
-        HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
-        HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
-
-        List<ParameterHandle> parameters = mapInteractionParameters.get(interactionClass);
-        for (ParameterHandle parameterHandle : parameters) {
-            try {
-                if (parameterHandle.equals(cruiseMissileStatus)
-                        || parameterHandle.equals(early_warningRadarStatus)
-                        || parameterHandle.equals(anti_aircraftStatus)
-                        || parameterHandle.equals(trackingRadarForEnemyStatus)
-                        || parameterHandle.equals(trackingRadarForOurStatus)
-                        ) {
-                    statusDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.print("Status: " + statusDecoder.getValue() + ";");
-                }
-                if (parameterHandle.equals(early_warningRadarPosition)
-                        || parameterHandle.equals(trackingRadarForEnemyPosition)
-                        || parameterHandle.equals(trackingRadarForOurPosition)
-                        ) {
-                    positionDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.println("Position: " + positionDecoder.getValue());
-                }
-                if (parameterHandle.equals(strategyOfMissionDistribution)
-                        || parameterHandle.equals(route)
-                        ) {
-                    variableArrayDecoder.decode(theParameters.get(parameterHandle));
-                    String variableArray = variableArrayDecoder.toString();
-                    System.out.println("Distribution or Route: " + variableArray);
-                }
-
-                // Test
-                if (parameterHandle.equals(communicationMessage)
-                        || parameterHandle.equals(communicationSender)
-                        ) {
-                    HLAunicodeString communicationDecoder = encoderFactory.createHLAunicodeString();
-                    communicationDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.println("Communication: " + communicationDecoder.getValue());
-                }
-            } catch (DecoderException e) {
-                System.out.println("Failed to decode incoming interaction");
-            }
-        }
     }
 
     @Override
@@ -606,57 +506,6 @@ public class Federate extends NullFederateAmbassador implements Runnable {
                                    MessageRetractionHandle retractionHandle,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        System.out.println(this.federateAttributes.getName() + " received interaction with time " + theTime.toString());
-
-        try {
-            advancedStep = (HLAfloat64Interval) theTime.distance(currentTime);
-        } catch (InvalidLogicalTime invalidLogicalTime) {
-            invalidLogicalTime.printStackTrace();
-        }
-
-        HLAinteger16LE statusDecoder = encoderFactory.createHLAinteger16LE();
-        HLAunicodeString positionDecoder = encoderFactory.createHLAunicodeString();
-        HLAvariableArray variableArrayDecoder = encoderFactory.createHLAvariableArray(factory);
-
-        List<ParameterHandle> parameters = mapInteractionParameters.get(interactionClass);
-        for (ParameterHandle parameterHandle : parameters) {
-            try {
-                if (parameterHandle.equals(cruiseMissileStatus)
-                        || parameterHandle.equals(early_warningRadarStatus)
-                        || parameterHandle.equals(anti_aircraftStatus)
-                        || parameterHandle.equals(trackingRadarForEnemyStatus)
-                        || parameterHandle.equals(trackingRadarForOurStatus)
-                        ) {
-                    statusDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.print("Status: " + statusDecoder.getValue() + ";");
-                }
-                if (parameterHandle.equals(early_warningRadarPosition)
-                        || parameterHandle.equals(trackingRadarForEnemyPosition)
-                        || parameterHandle.equals(trackingRadarForOurPosition)
-                        ) {
-                    positionDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.println("Position: " + positionDecoder.getValue());
-                }
-                if (parameterHandle.equals(strategyOfMissionDistribution)
-                        || parameterHandle.equals(route)
-                        ) {
-                    variableArrayDecoder.decode(theParameters.get(parameterHandle));
-                    String variableArray = variableArrayDecoder.toString();
-                    System.out.println("Distribution: " + variableArray);
-                }
-
-                // Test
-                if (parameterHandle.equals(communicationMessage)
-                        || parameterHandle.equals(communicationSender)
-                        ) {
-                    HLAunicodeString communicationDecoder = encoderFactory.createHLAunicodeString();
-                    communicationDecoder.decode(theParameters.get(parameterHandle));
-                    System.out.println("Communication: " + communicationDecoder.getValue());
-                }
-            } catch (DecoderException e) {
-                System.out.println("Failed to decode incoming interaction");
-            }
-        }
     }
 
     @Override
@@ -762,90 +611,58 @@ public class Federate extends NullFederateAmbassador implements Runnable {
     private void subscribeAndPublishObjects() {
         List<AttributeHandle> tmp;
         try {
-            ObjectClassHandle objectCruiseMissile = rtiAmbassador.getObjectClassHandle("CruiseMissile");
-            AttributeHandle cruiseMissileAttributePosition = rtiAmbassador.getAttributeHandle(objectCruiseMissile, "Position");
+            ObjectClassHandle objectGroupA = rtiAmbassador.getObjectClassHandle("GroupA");
+            AttributeHandle groupAAttributeLocation = rtiAmbassador.getAttributeHandle(objectGroupA, "location");
             tmp = new ArrayList<>();
-            tmp.add(cruiseMissileAttributePosition);
-            mapObjectAttributes.put(objectCruiseMissile,tmp);
+            tmp.add(groupAAttributeLocation);
+            mapObjectAttributes.put(objectGroupA,tmp);
 
-            ObjectClassHandle objectEarly_warningRadar = rtiAmbassador.getObjectClassHandle("Early_warningRadar");
-            AttributeHandle early_warningRadarAttributeId = rtiAmbassador.getAttributeHandle(objectEarly_warningRadar, "ID");
+            //ObjectClassHandle objectGroupB = rtiAmbassador.getObjectClassHandle("GroupB");
+            //ObjectClassHandle objectGroupC = rtiAmbassador.getObjectClassHandle("GroupC");
+
+            ObjectClassHandle objectGroupD = rtiAmbassador.getObjectClassHandle("GroupD");
+            AttributeHandle groupDAttributeLocation = rtiAmbassador.getAttributeHandle(objectGroupD, "location");
             tmp = new ArrayList<>();
-            tmp.add(early_warningRadarAttributeId);
-            mapObjectAttributes.put(objectEarly_warningRadar,tmp);
+            tmp.add(groupDAttributeLocation);
+            mapObjectAttributes.put(objectGroupD,tmp);
 
-            ObjectClassHandle objectMissionDistribution = rtiAmbassador.getObjectClassHandle("MissionDistribution");
-            AttributeHandle missionDistributionAttributeId = rtiAmbassador.getAttributeHandle(objectMissionDistribution, "ID");
-            tmp = new ArrayList<>();
-            tmp.add(missionDistributionAttributeId);
-            mapObjectAttributes.put(objectMissionDistribution, tmp);
+            //ObjectClassHandle objectGroupE = rtiAmbassador.getObjectClassHandle("GroupE");
+            //ObjectClassHandle objectGroupF = rtiAmbassador.getObjectClassHandle("GroupF");
+            //ObjectClassHandle objectGroupI = rtiAmbassador.getObjectClassHandle("GroupI");
 
-            ObjectClassHandle objectAnti_aircraftMissile = rtiAmbassador.getObjectClassHandle("Anti_aircraftMissile");
-            AttributeHandle anti_aircraftMissileAttributePosition = rtiAmbassador.getAttributeHandle(objectAnti_aircraftMissile, "Position");
-            tmp = new ArrayList<>();
-            tmp.add(anti_aircraftMissileAttributePosition);
-            mapObjectAttributes.put(objectAnti_aircraftMissile,tmp);
-
-            ObjectClassHandle objectRoutePlanning = rtiAmbassador.getObjectClassHandle("RoutePlanning");
-            AttributeHandle routePlanningAttributeId = rtiAmbassador.getAttributeHandle(objectRoutePlanning, "ID");
-            tmp = new ArrayList<>();
-            tmp.add(routePlanningAttributeId);
-            mapObjectAttributes.put(objectRoutePlanning,tmp);
-
-            ObjectClassHandle objectTrackingRadarForEnemy = rtiAmbassador.getObjectClassHandle("TrackingRadarForEnemyTarget");
-            AttributeHandle trackingRadarForEnemyAttributeId = rtiAmbassador.getAttributeHandle(objectTrackingRadarForEnemy, "ID");
-            tmp = new ArrayList<>();
-            tmp.add(trackingRadarForEnemyAttributeId);
-            mapObjectAttributes.put(objectTrackingRadarForEnemy,tmp);
-
-            ObjectClassHandle objectTrackingRadarForOur = rtiAmbassador.getObjectClassHandle("TrackingRadarForOurTarget");
-            AttributeHandle trackingRadarForOurAttributeId = rtiAmbassador.getAttributeHandle(objectTrackingRadarForOur, "ID");
-            tmp = new ArrayList<>();
-            tmp.add(trackingRadarForOurAttributeId);
-            mapObjectAttributes.put(objectTrackingRadarForOur,tmp);
-
-            ObjectClassHandle objectParticipant = rtiAmbassador.getObjectClassHandle("Participant");
-            AttributeHandle participantAttributeId = rtiAmbassador.getAttributeHandle(objectParticipant, "Name");
-            tmp = new ArrayList<>();
-            tmp.add(participantAttributeId);
-            mapObjectAttributes.put(objectParticipant,tmp);
-
-            objectClassHandles = new ObjectClassHandle[]{objectCruiseMissile, objectEarly_warningRadar, objectMissionDistribution, objectAnti_aircraftMissile, objectRoutePlanning, objectTrackingRadarForEnemy, objectTrackingRadarForOur, objectParticipant};
+            objectClassHandles = new ObjectClassHandle[]{objectGroupA, objectGroupD};
 
             AttributeHandleSet publishAttributeHandleSet = rtiAmbassador.getAttributeHandleSetFactory().create();
             AttributeHandleSet subscribeAttributeHandleSet = rtiAmbassador.getAttributeHandleSetFactory().create();
 
             // Publish object attributes.
-            for (AttributeHandle attributeHandle : mapObjectAttributes.get(objectClassHandles[federateAttributes.getType()])) {
-                publishAttributeHandleSet.add(attributeHandle);
-            }
-            rtiAmbassador.publishObjectClassAttributes(objectClassHandles[federateAttributes.getType()],publishAttributeHandleSet);
-
             // Subscribe object attributes.
             switch (federateAttributes.getType()) {
                 case 0:
+                    publishAttributeHandleSet.add(groupAAttributeLocation);
+                    rtiAmbassador.publishObjectClassAttributes(objectGroupA, publishAttributeHandleSet);
                     break;
                 case 1:
-                    subscribeAttributeHandleSet.add(cruiseMissileAttributePosition);
-                    rtiAmbassador.subscribeObjectClassAttributes(objectCruiseMissile, subscribeAttributeHandleSet);
+                    subscribeAttributeHandleSet.add(groupAAttributeLocation);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectGroupA, subscribeAttributeHandleSet);
                     break;
                 case 2:
+                    subscribeAttributeHandleSet.add(groupAAttributeLocation);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectGroupA, subscribeAttributeHandleSet);
+                    subscribeAttributeHandleSet.add(groupDAttributeLocation);
+                    rtiAmbassador.subscribeObjectClassAttributes(objectGroupD, subscribeAttributeHandleSet);
                     break;
                 case 3:
+                    publishAttributeHandleSet.add(groupDAttributeLocation);
+                    rtiAmbassador.publishObjectClassAttributes(objectGroupD, publishAttributeHandleSet);
                     break;
                 case 4:
                     break;
                 case 5:
-                    subscribeAttributeHandleSet.add(cruiseMissileAttributePosition);
-                    rtiAmbassador.subscribeObjectClassAttributes(objectCruiseMissile, subscribeAttributeHandleSet);
                     break;
                 case 6:
-                    subscribeAttributeHandleSet.add(anti_aircraftMissileAttributePosition);
-                    rtiAmbassador.subscribeObjectClassAttributes(objectAnti_aircraftMissile, subscribeAttributeHandleSet);
                     break;
                 default:
-                    subscribeAttributeHandleSet = publishAttributeHandleSet;
-                    rtiAmbassador.publishObjectClassAttributes(objectParticipant, subscribeAttributeHandleSet);
                     break;
             }
         } catch (RTIexception ignored) {
@@ -859,91 +676,87 @@ public class Federate extends NullFederateAmbassador implements Runnable {
         List<ParameterHandle> tmp;
 
         try {
-            InteractionClassHandle cruiseMissile = rtiAmbassador.getInteractionClassHandle("CruiseMissile");
-            cruiseMissileStatus = rtiAmbassador.getParameterHandle(cruiseMissile,"Status");
+            InteractionClassHandle groupB = rtiAmbassador.getInteractionClassHandle("GroupB");
+            groupBLocation = rtiAmbassador.getParameterHandle(groupB,"location");
             tmp = new ArrayList<>();
-            tmp.add(cruiseMissileStatus);
-            mapInteractionParameters.put(cruiseMissile,tmp);
+            tmp.add(groupBLocation);
+            mapInteractionParameters.put(groupB,tmp);
 
-            InteractionClassHandle early_warningRadar = rtiAmbassador.getInteractionClassHandle("Early_warningRadar");
-            early_warningRadarStatus = rtiAmbassador.getParameterHandle(early_warningRadar,"Status");
-            early_warningRadarPosition = rtiAmbassador.getParameterHandle(early_warningRadar,"Position");
+            InteractionClassHandle groupC = rtiAmbassador.getInteractionClassHandle("GroupC");
+            groupCLocation = rtiAmbassador.getParameterHandle(groupC,"location");
             tmp = new ArrayList<>();
-            tmp.add(early_warningRadarStatus);
-            tmp.add(early_warningRadarPosition);
-            mapInteractionParameters.put(early_warningRadar,tmp);
+            tmp.add(groupCLocation);
+            mapInteractionParameters.put(groupC,tmp);
 
-            InteractionClassHandle missionDistribution = rtiAmbassador.getInteractionClassHandle("MissionDistribution");
-            strategyOfMissionDistribution = rtiAmbassador.getParameterHandle(missionDistribution,"Strategy");
+            InteractionClassHandle groupE = rtiAmbassador.getInteractionClassHandle("GroupE");
+            groupEResult = rtiAmbassador.getParameterHandle(groupE,"result");
             tmp = new ArrayList<>();
-            tmp.add(strategyOfMissionDistribution);
-            mapInteractionParameters.put(missionDistribution,tmp);
+            tmp.add(groupEResult);
+            mapInteractionParameters.put(groupE,tmp);
 
-            InteractionClassHandle anti_aircraftMissile = rtiAmbassador.getInteractionClassHandle("Anti_aircraftMissile");
-            anti_aircraftStatus = rtiAmbassador.getParameterHandle(anti_aircraftMissile,"Status");
+            InteractionClassHandle groupF = rtiAmbassador.getInteractionClassHandle("GroupF");
+            groupFRoute = rtiAmbassador.getParameterHandle(groupF,"route");
             tmp = new ArrayList<>();
-            tmp.add(anti_aircraftStatus);
-            mapInteractionParameters.put(anti_aircraftMissile,tmp);
+            tmp.add(groupFRoute);
+            mapInteractionParameters.put(groupF,tmp);
 
-            InteractionClassHandle routePlanning = rtiAmbassador.getInteractionClassHandle("RoutePlanning");
-            route = rtiAmbassador.getParameterHandle(routePlanning,"Route");
+            InteractionClassHandle Status = rtiAmbassador.getInteractionClassHandle("Status");
+            StatusValue = rtiAmbassador.getParameterHandle(Status,"status");
             tmp = new ArrayList<>();
-            tmp.add(route);
-            mapInteractionParameters.put(routePlanning,tmp);
+            tmp.add(StatusValue);
+            mapInteractionParameters.put(Status,tmp);
 
-            InteractionClassHandle trackingRadarForEnemy = rtiAmbassador.getInteractionClassHandle("TrackingRadarForEnemyTarget");
-            trackingRadarForEnemyStatus = rtiAmbassador.getParameterHandle(trackingRadarForEnemy,"Status");
-            trackingRadarForEnemyPosition = rtiAmbassador.getParameterHandle(trackingRadarForEnemy,"Position");
+            InteractionClassHandle Moment = rtiAmbassador.getInteractionClassHandle("Moment");
+            MomentValue = rtiAmbassador.getParameterHandle(Moment,"moment");
             tmp = new ArrayList<>();
-            tmp.add(trackingRadarForEnemyStatus);
-            tmp.add(trackingRadarForEnemyPosition);
-            mapInteractionParameters.put(trackingRadarForEnemy,tmp);
+            tmp.add(MomentValue);
+            mapInteractionParameters.put(Moment,tmp);
 
-            InteractionClassHandle trackingRadarForOur = rtiAmbassador.getInteractionClassHandle("TrackingRadarForOurTarget");
-            trackingRadarForOurStatus = rtiAmbassador.getParameterHandle(trackingRadarForOur,"Status");
-            trackingRadarForOurPosition = rtiAmbassador.getParameterHandle(trackingRadarForOur,"Position");
-            tmp = new ArrayList<>();
-            tmp.add(trackingRadarForOurStatus);
-            tmp.add(trackingRadarForOurPosition);
-            mapInteractionParameters.put(trackingRadarForOur,tmp);
-
-            InteractionClassHandle communication = rtiAmbassador.getInteractionClassHandle("Communication");
-            communicationMessage = rtiAmbassador.getParameterHandle(communication, "Message");
-            communicationSender = rtiAmbassador.getParameterHandle(communication, "Sender");
-            tmp = new ArrayList<>();
-            tmp.add(communicationMessage);
-            tmp.add(communicationSender);
-            mapInteractionParameters.put(communication,tmp);
-
-            interactionClasses = new InteractionClassHandle[]{cruiseMissile,early_warningRadar,missionDistribution,anti_aircraftMissile,routePlanning,trackingRadarForEnemy, trackingRadarForOur, communication};
+            interactionClasses = new InteractionClassHandle[]{groupB,groupC,groupE,groupF,Status,Moment};
 
             // Publish interactions
-            rtiAmbassador.publishInteractionClass(interactionClasses[federateAttributes.getType()]);
             // Subscribe interactions
             switch (federateAttributes.getType()) {
                 case 0:
+                    rtiAmbassador.subscribeInteractionClass(Moment);
                     break;
                 case 1:
-                    //rtiAmbassador.subscribeInteractionClass(cruiseMissile);
+                    rtiAmbassador.publishInteractionClass(groupB);
+
+                    rtiAmbassador.subscribeInteractionClass(Moment);
                     break;
                 case 2:
-                    rtiAmbassador.subscribeInteractionClass(early_warningRadar);
-                    rtiAmbassador.subscribeInteractionClass(trackingRadarForOur);
+                    rtiAmbassador.publishInteractionClass(groupC);
+
+                    rtiAmbassador.subscribeInteractionClass(Moment);
                     break;
                 case 3:
-                    rtiAmbassador.subscribeInteractionClass(routePlanning);
+                    rtiAmbassador.subscribeInteractionClass(groupF);
+
+                    rtiAmbassador.subscribeInteractionClass(Moment);
                     break;
                 case 4:
-                    rtiAmbassador.subscribeInteractionClass(trackingRadarForEnemy);
-                    rtiAmbassador.subscribeInteractionClass(trackingRadarForOur);
-                    rtiAmbassador.subscribeInteractionClass(missionDistribution);
+                    rtiAmbassador.publishInteractionClass(groupE);
+                    rtiAmbassador.publishInteractionClass(Status);
+
+                    rtiAmbassador.subscribeInteractionClass(groupB);
+                    rtiAmbassador.subscribeInteractionClass(Moment);
                     break;
                 case 5:
+                    rtiAmbassador.publishInteractionClass(groupF);
+                    rtiAmbassador.publishInteractionClass(Status);
+
+                    rtiAmbassador.subscribeInteractionClass(groupC);
+                    rtiAmbassador.subscribeInteractionClass(groupE);
+                    rtiAmbassador.subscribeInteractionClass(Moment);
                     break;
                 case 6:
+                    rtiAmbassador.publishInteractionClass(Moment);
+
+                    rtiAmbassador.subscribeInteractionClass(groupF);
+                    rtiAmbassador.subscribeInteractionClass(Status);
                     break;
                 default:
-                    rtiAmbassador.subscribeInteractionClass(communication);
                     break;
             }
         } catch (RTIexception ignored) {
